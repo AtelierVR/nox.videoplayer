@@ -23,7 +23,6 @@
       "website": "https://hactazia.fr/"
     }
   ],
-  "contributors": [],
   "relations": [
     {
       "id": "ui",
@@ -33,13 +32,10 @@
   ],
   "entrypoints": {
     "main": [
-      "nox.videoplayer.Main"
+      "Nox.VideoPlayer.Runtime.Main"
     ],
     "client": [
-      "nox.videoplayer.Client"
+      "Nox.VideoPlayer.Runtime.Client"
     ]
-  },
-  "references": [],
-  
-  "permissions": []
+  }
 }

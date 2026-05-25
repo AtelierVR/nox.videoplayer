@@ -1,14 +1,13 @@
 ﻿using System.Linq;
-using api.nox.videoplayer.client;
 using Cysharp.Threading.Tasks;
 using Nox.CCK.Utils;
 using Nox.UI;
 using Nox.UI.Widgets;
-using Nox.VideoPlayer;
+using Nox.VideoPlayer.Runtime.Helpers;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace api.nox.videoplayer.widget {
+namespace Nox.VideoPlayer.Runtime.Clients {
 	public class VideoPlayerWidget : MonoBehaviour, IWidget {
 		public static string GetDefaultKey()
 			=> "videoPlayer";

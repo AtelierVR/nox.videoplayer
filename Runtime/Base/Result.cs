@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using Nox.VideoPlayer;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Base {
 	public class Result : IResult {
 		public string       Error = null;
 		public Resolve[] Data  = null;

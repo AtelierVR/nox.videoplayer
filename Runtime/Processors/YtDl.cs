@@ -8,7 +8,7 @@ using Cysharp.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Nox.CCK.Utils;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Processors {
 	public static class YtDl {
 		public static string GetFolder()
 			=> Path.Combine(Constants.ConfigPath, "ytdlp");
@@ -207,7 +207,8 @@ namespace api.nox.videoplayer {
 								var line = await process.StandardOutput.ReadLineAsync();
 								if (line != null)
 									output.AppendLine(line);
-								else await UniTask.Delay(10, cancellationToken: cancellationToken);
+								else
+									await UniTask.Delay(10, cancellationToken: cancellationToken);
 							}
 
 							// Read remaining output after process exits
@@ -227,7 +228,8 @@ namespace api.nox.videoplayer {
 								var line = await process.StandardError.ReadLineAsync();
 								if (line != null)
 									error.AppendLine(line);
-								else await UniTask.Delay(10, cancellationToken: cancellationToken);
+								else
+									await UniTask.Delay(10, cancellationToken: cancellationToken);
 							}
 
 							// Read remaining error after process exits
@@ -307,13 +309,15 @@ namespace api.nox.videoplayer {
 							if (!string.IsNullOrEmpty(line)) {
 								Logger.LogDebug(line, tag: "yt-dlp");
 								output.AppendLine(line);
-							} else await UniTask.Delay(10, cancellationToken: cancellationToken);
+							} else
+								await UniTask.Delay(10, cancellationToken: cancellationToken);
 						}
 
 						// Read remaining output after process exits
 						while (!stdout.EndOfStream) {
 							var line = await stdout.ReadLineAsync();
-							if (string.IsNullOrEmpty(line)) continue;
+							if (string.IsNullOrEmpty(line))
+								continue;
 							Logger.LogDebug(line, tag: "yt-dlp");
 							output.AppendLine(line);
 						}
@@ -328,13 +332,15 @@ namespace api.nox.videoplayer {
 							if (!string.IsNullOrEmpty(line)) {
 								Logger.LogError(line, tag: "yt-dlp");
 								error.AppendLine(line);
-							} else await UniTask.Delay(10, cancellationToken: cancellationToken);
+							} else
+								await UniTask.Delay(10, cancellationToken: cancellationToken);
 						}
 
 						// Read remaining error after process exits
 						while (!stderr.EndOfStream) {
 							var line = await stderr.ReadLineAsync();
-							if (string.IsNullOrEmpty(line)) continue;
+							if (string.IsNullOrEmpty(line))
+								continue;
 							Logger.LogError(line, tag: "yt-dlp");
 							error.AppendLine(line);
 						}

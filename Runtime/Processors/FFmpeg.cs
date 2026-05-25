@@ -9,7 +9,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using Nox.CCK.Utils;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Processors {
 	public static class FFmpeg {
 		public static string GetFolder()
 			=> Path.Combine(Constants.ConfigPath, "ffmpeg");

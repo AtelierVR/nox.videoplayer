@@ -1,7 +1,7 @@
 using Nox.VideoPlayer;
 using UnityEngine;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Base {
 	public class Format : IFormat {
 		// Common
 		public string Url;

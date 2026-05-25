@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nox.UI;
-using Nox.VideoPlayer;
+using Nox.VideoPlayer.Runtime.Helpers;
 using UnityEngine;
 using Logger = Nox.CCK.Utils.Logger;
 
-namespace api.nox.videoplayer.client {
+namespace Nox.VideoPlayer.Runtime.Clients {
 	public class VideoPlayerPage : IPage {
 		readonly internal List<UiPlayer> Players = new();
 

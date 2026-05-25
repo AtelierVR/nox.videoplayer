@@ -1,7 +1,7 @@
 using Nox.VideoPlayer;
 using UnityEngine;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Helpers {
 	public static class VideoPlayerExtensions {
 		public static GameObject GetGameObject(this IVideoPlayer self)
 			=> self is MonoBehaviour mb ? mb.gameObject : null;

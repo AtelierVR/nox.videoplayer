@@ -1,12 +1,10 @@
 using Nox.CCK.Language;
 using Nox.CCK.Utils;
-using Nox.VideoPlayer;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
-namespace api.nox.videoplayer.client {
+namespace Nox.VideoPlayer.Runtime.Clients {
 	public class VideoPlayerComponent : MonoBehaviour {
 		private VideoPlayerPage _page;
 

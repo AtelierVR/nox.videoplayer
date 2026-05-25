@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using api.nox.videoplayer.handlers;
 using Cysharp.Threading.Tasks;
 using Nox.CCK.Language;
 using Nox.CCK.Mods.Cores;
 using Nox.CCK.Mods.Initializers;
-using Nox.VideoPlayer;
+using Nox.VideoPlayer.Runtime.Handlers;
+using Nox.VideoPlayer.Runtime.Helpers;
+using Nox.VideoPlayer.Runtime.Processors;
 using UnityEngine.Events;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime {
 	public class Main : IMainModInitializer, IVideoPlayerAPI {
 		static readonly internal List<IHandler>     Handlers = new();
 		public static            Main               Instance;

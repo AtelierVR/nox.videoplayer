@@ -1,72 +1,86 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Cysharp.Threading.Tasks;
-using Nox.VideoPlayer;
 using Newtonsoft.Json.Linq;
+using Nox.VideoPlayer;
+using Nox.VideoPlayer.Runtime.Base;
+using Nox.VideoPlayer.Runtime.Processors;
 using UnityEngine;
 using Logger = Nox.CCK.Utils.Logger;
 
-namespace api.nox.videoplayer.handlers {
-	public class Twitch : IHandler {
-		public const string SearchPrefix = "twitch:";
+namespace Nox.VideoPlayer.Runtime.Handlers {
+	public class Youtube : IHandler {
+		public const string SearchPrefix = "youtube:";
+
 		public string GetId()
-			=> "twitch";
+			=> "youtube";
 
 		public string GetTitleKey()
-			=> "videoplayer.handler.twitch";
+			=> "videoplayer.handler.youtube";
 
 		public string[] GetTitleArguments()
 			=> new string[] { };
 
-		public int EstimatePriority(IFetchOptions options)
-			=> IsUrl(options.GetQuery()) 
-			|| options.GetQuery().StartsWith(SearchPrefix) 
-			? 100 
-			: -1;
+		public int EstimatePriority(IFetchOptions options) {
+			if (IsUrl(options.GetQuery()))
+				return 100;
+			if (options.GetQuery().StartsWith(SearchPrefix))
+				return 10;
+			return -1;
+		}
 
 		private static bool IsUrl(string query)
-			=> query.StartsWith("https://www.twitch.tv/");
+			=> query.StartsWith("https://www.youtube.com/watch")
+				|| query.StartsWith("https://music.youtube.com/watch")
+				|| query.StartsWith("https://youtu.be/");
 
 		private static string FormatUrl(string original) {
 			var id = "";
 
-			if (original.StartsWith("https://www.twitch.tv/")) {
-				var uri = new Uri(original);
+			if (original.StartsWith("https://www.youtube.com/watch")
+				|| original.StartsWith("https://music.youtube.com/watch")) {
+				var uri   = new System.Uri(original);
+				var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+				id = query.Get("v") ?? "";
+			} else if (original.StartsWith("https://youtu.be/")) {
+				var uri = new System.Uri(original);
 				id = uri.AbsolutePath.TrimStart('/');
 			}
 
-			return $"https://www.twitch.tv/{id}";
+			return $"https://www.youtube.com/watch?v={id}";
 		}
 
 		public async UniTask<IResult[]> Fetch(IFetchOptions options) {
 			try {
 				if (EstimatePriority(options) < 0)
-					return new IResult[] { Result.FromError("Query is not a valid Twitch URL") };
+					return new IResult[] { Result.FromError("Cannot handle this query") };
 
-				var twitchUrl = options.GetQuery().StartsWith(SearchPrefix)
-					? $"https://www.twitch.tv/{options.GetQuery()[SearchPrefix.Length..]}"
-					: FormatUrl(options.GetQuery());
-				var response = await YtDl.Extract(twitchUrl, cancellationToken: options.GetCancellation().Token);
+				var searchQuery = options.GetQuery().StartsWith(SearchPrefix)
+					? options.GetQuery().Substring(SearchPrefix.Length)
+					: options.GetQuery();
+				var response = IsUrl(options.GetQuery())
+					? await YtDl.Extract(FormatUrl(options.GetQuery()), cancellationToken: options.GetCancellation().Token)
+					: await YtDl.Extract($"ytsearch{options.GetLimit()}:{searchQuery}", cancellationToken: options.GetCancellation().Token);
 
 				if (response is not { Type: JTokenType.Object })
 					throw new InvalidDataException("Response from yt-dlp is not an object");
 
 				var type      = Global.ToObject(response["_type"], "unknown");
 				var extractor = Global.ToObject(response["extractor"], "unknown");
-				if (extractor != "twitch:stream" && extractor != "twitch")
+				if (extractor != "youtube:search" && extractor != "youtube")
 					throw new InvalidDataException($"Unexpected extractor: {extractor}");
 
 				return new IResult[] {
 					Result.FromData(
 						type switch {
-							"video" => new[] { ParseVideo(response) },
-							_       => throw new InvalidDataException($"Unknown response type: {type}")
+							"video"    => new[] { ParseVideo(response) },
+							"playlist" => ParsePlaylist(response),
+							_          => throw new InvalidDataException($"Unknown response type: {type}")
 						}
 					)
 				};
-			} catch (Exception e) {
+			} catch (System.Exception e) {
 				Logger.LogError(e);
 				return new IResult[] { Result.FromError(e.Message) };
 			}
@@ -77,49 +91,39 @@ namespace api.nox.videoplayer.handlers {
 				throw new InvalidDataException("Video is not an object");
 
 			return new Resolve {
-				Id = video["id"]?.ToString() ?? "",
-				Title = video["description"]?.ToString()
-					?? video["title"]?.ToString()
-					?? video["fulltitle"]?.ToString()
-					?? video["id"]?.ToString(),
+				Id         = video["id"]?.ToString() ?? "",
+				Title      = video["title"]?.ToString() ?? video["fulltitle"]?.ToString() ?? video["id"]?.ToString(),
 				Thumbnails = ParseThumbnails(video["thumbnails"]),
-				Subtitles  = Array.Empty<Subtitle>(),
+				Subtitles  = ParseSubtitles(video["subtitles"]),
 				Formats    = ParseFormats(video["formats"])
 			};
 		}
 
 		private static Thumbnail[] ParseThumbnails(JToken thumbnails) {
 			if (thumbnails is not { Type: JTokenType.Array })
-				return Array.Empty<Thumbnail>();
+				return System.Array.Empty<Thumbnail>();
 
 			return (from thumb in thumbnails
 				where thumb is { Type: JTokenType.Object }
 				let url = Global.ToObject(thumb["url"], "")
 				where !string.IsNullOrWhiteSpace(url)
-				select new Thumbnail { Url = url, Language = null, Resolution = ExtractResolutionFromThumbnailUrl(url) }).ToArray();
+				let width = Global.ToObject(thumb["width"], -1)
+				let height = Global.ToObject(thumb["height"], -1)
+				select new Thumbnail { Url = url, Language = null, Resolution = new Vector2Int(width, height) }).ToArray();
 		}
 
-		private static Vector2Int ExtractResolutionFromThumbnailUrl(string url) {
-			try {
-				var lastPart = url.Split('/').LastOrDefault();
-				if (string.IsNullOrWhiteSpace(lastPart))
-					return new Vector2Int(-1, -1);
-
-				var sizePart = lastPart.Split('-').LastOrDefault();
-				if (string.IsNullOrWhiteSpace(sizePart))
-					return new Vector2Int(-1, -1);
-
-				var dimensions = sizePart.Split('x');
-				if (dimensions.Length != 2)
-					return new Vector2Int(-1, -1);
-
-				if (int.TryParse(dimensions[0], out var width) && int.TryParse(dimensions[1], out var height))
-					return new Vector2Int(width, height);
-			} catch (Exception e) {
-				Logger.LogError(e);
-			}
-
-			return new Vector2Int(-1, -1);
+		private static Subtitle[] ParseSubtitles(JToken subtitles) {
+			if (subtitles is not { Type: JTokenType.Object })
+				return System.Array.Empty<Subtitle>();
+			return (from entry in subtitles.Children<JProperty>()
+				let lang = entry.Name
+				where entry.Value is { Type: JTokenType.Array }
+				from sub in entry.Value
+				let ext = Global.ToObject(sub["ext"], "")
+				let url = Global.ToObject(sub["url"], "")
+				let name = Global.ToObject(sub["name"], "")
+				where !string.IsNullOrWhiteSpace(url) && ext == "srt"
+				select new Subtitle { Url = url, Language = lang, Title = name }).ToArray();
 		}
 
 		private static Format[] ParseFormats(JToken formats) {
@@ -140,12 +144,13 @@ namespace api.nox.videoplayer.handlers {
 					fmt = new AudioFormat();
 				else if (vcodec != "none")
 					fmt = new VideoFormat();
-				else continue;
+				else
+					continue;
 
 				fmt.Url       = Global.ToObject(format["url"], "");
 				fmt.Container = Global.ToObject(format["container"], "");
 				fmt.Language  = Global.ToObject(format["language"], "");
-				fmt.Bitrate   = Global.ToObject(format["tbr"], 0u);
+				fmt.Bitrate   = Global.ToObject(format["bitrate"], 0u);
 				fmt.Quality   = Global.ToObject(format["quality"], 0f);
 
 				if (fmt is AudioVideoFormat or VideoFormat) {
@@ -154,7 +159,7 @@ namespace api.nox.videoplayer.handlers {
 						Global.ToObject(format["height"], 0)
 					);
 					fmt.Framerate    = Global.ToObject(format["fps"], 0u);
-					fmt.VideoBitrate = Global.ToObject(format["vbr"], 0u);
+					fmt.VideoBitrate = Global.ToObject(format["tbr"], 0u);
 					fmt.VideoCodec   = vcodec;
 					fmt.DynamicRange = Global.ToObject(format["dynamic_range"], "SDR");
 				}

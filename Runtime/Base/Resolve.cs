@@ -3,7 +3,7 @@ using Nox.VideoPlayer;
 using UnityEngine;
 using Logger = Nox.CCK.Utils.Logger;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Base {
 	public class Resolve : IResolve {
 		public string      Id;
 		public string      Title;

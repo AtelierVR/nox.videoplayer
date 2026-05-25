@@ -1,6 +1,6 @@
 using Nox.VideoPlayer;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Base {
 	public class AudioFormat: Format, IAudio {
 	}
 }

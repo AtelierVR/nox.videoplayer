@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using api.nox.videoplayer.client;
-using api.nox.videoplayer.widget;
 using Cysharp.Threading.Tasks;
 using Nox.CCK.Mods.Cores;
 using Nox.CCK.Mods.Events;
@@ -9,9 +7,10 @@ using Nox.CCK.Mods.Initializers;
 using Nox.CCK.Utils;
 using Nox.UI;
 using Nox.UI.Widgets;
+using Nox.VideoPlayer.Runtime.Clients;
 using UnityEngine;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime {
 	public class Client : IClientModInitializer {
 		internal static IUiAPI UiAPI
 			=> Main.Instance.CoreAPI.ModAPI
@@ -26,8 +25,8 @@ namespace api.nox.videoplayer {
 
 		private EventSubscription[] _events = Array.Empty<EventSubscription>();
 
-		internal static Client            Instance;
-		internal        IClientModCoreAPI CoreAPI;
+		internal static Client Instance;
+		internal IClientModCoreAPI CoreAPI;
 
 		public void OnInitializeClient(IClientModCoreAPI api) {
 			Instance = this;
@@ -39,22 +38,29 @@ namespace api.nox.videoplayer {
 		}
 
 		private static void OnGoto(EventData context) {
-			if (!context.TryGet(0, out int mid)) return;
-			if (!context.TryGet(1, out string key)) return;
+			if (!context.TryGet(0, out int mid))
+				return;
+			if (!context.TryGet(1, out string key))
+				return;
 			var menu = UiAPI?.Get<IMenu>(mid);
-			if (menu == null) return;
+			if (menu == null)
+				return;
 			IPage page = null;
 			if (VideoPlayerPage.GetStaticKey() == key)
 				page = VideoPlayerPage.OnGotoAction(menu, context.Data[2..]);
-			if (page == null) return;
+			if (page == null)
+				return;
 			Main.Instance.CoreAPI.EventAPI.Emit("menu_display", menu.Id, page);
 		}
 
 		private static void OnWidgetRequest(EventData context) {
-			if (!context.TryGet(0, out int mid)) return;
-			if (!context.TryGet(1, out RectTransform tr)) return;
+			if (!context.TryGet(0, out int mid))
+				return;
+			if (!context.TryGet(1, out RectTransform tr))
+				return;
 			var menu = UiAPI?.Get<IMenu>(mid);
-			if (menu == null) return;
+			if (menu == null)
+				return;
 			List<(GameObject, IWidget)> widgets = new();
 			if (VideoPlayerWidget.TryMake(menu, tr, out var widget))
 				widgets.Add(widget);

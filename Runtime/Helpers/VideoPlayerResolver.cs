@@ -7,7 +7,7 @@ using Nox.CCK.Utils;
 using Nox.VideoPlayer;
 using CCKResolver = Nox.CCK.VideoPlayer.VideoPlayerResolver;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Helpers {
 	public static class VideoPlayerResolver {
 		public static void Listen() {
 			CCKResolver.OnResolve.AddListener(OnResolvingAsync);

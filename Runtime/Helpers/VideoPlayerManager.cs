@@ -6,7 +6,7 @@ using Nox.VideoPlayer;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Helpers {
 	public static class VideoPlayerManager {
 		public static readonly List<IVideoPlayer> VideoPlayers = new();
 

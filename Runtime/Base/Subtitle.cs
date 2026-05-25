@@ -2,7 +2,7 @@ using System;
 using Cysharp.Threading.Tasks;
 using Nox.VideoPlayer;
 
-namespace api.nox.videoplayer {
+namespace Nox.VideoPlayer.Runtime.Base {
 	public class Subtitle : ISubtitle {
 		public string Url;
 		public string Language;
