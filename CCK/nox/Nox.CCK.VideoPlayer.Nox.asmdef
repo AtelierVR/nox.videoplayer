@@ -1,0 +1,26 @@
+{
+  "name": "Nox.CCK.VideoPlayer.Nox",
+  "rootNamespace": "",
+  "references": [
+    "Nox.CCK",
+    "UniTask",
+    "Nox.VideoPlayer",
+    "Nox.CCK.VideoPlayer",
+    "Nox.FFmpeg"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [
+    {
+      "name": "nox.ffmpeg",
+      "expression": "",
+      "define": "HAS_NOX_FFMPEG"
+    }
+  ],
+  "noEngineReferences": false
+}

@@ -1,0 +1,25 @@
+{
+  "name": "Nox.CCK.VideoPlayer.Unity",
+  "rootNamespace": "",
+  "references": [
+    "Nox.CCK",
+    "UniTask",
+    "Nox.VideoPlayer",
+    "Nox.CCK.VideoPlayer"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.modules.video",
+      "expression": "",
+      "define": "HAS_UNITY_VIDEOPLAYER"
+    }
+  ],
+  "noEngineReferences": false
+}

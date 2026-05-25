@@ -1,0 +1,6 @@
+﻿{
+  "name": "nox.videoplayer",
+  "displayName": "Nox - Video Player",
+  "version": "1.0.0",
+  "description": "API for in-world video playback and media control."
+}
