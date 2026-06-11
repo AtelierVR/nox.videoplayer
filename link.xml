@@ -3,7 +3,6 @@
 	<assembly fullname="Nox.CCK.VideoPlayer" preserve="all" />
 	<assembly fullname="Nox.CCK.VideoPlayer.Nox" preserve="all" />
 	<assembly fullname="Nox.CCK.VideoPlayer.Unity" preserve="all" />
-	<assembly fullname="Nox.Mods.VideoPlayer" preserve="all" />
 	<assembly fullname="Nox.VideoPlayer" preserve="all" />
 	<assembly fullname="Nox.VideoPlayer.Runtime" preserve="all" />
 </linker>
