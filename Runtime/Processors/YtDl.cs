@@ -16,6 +16,17 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 		public static string GetExecutable()
 			=> PlatformExtensions.RuntimePlatform switch {
 				Platform.Windows => "yt-dlp.exe",
+				Platform.Linux   => "yt-dlp",
+				Platform.MacOS   => "yt-dlp",
+				_                => null
+			};
+
+		/// <summary>
+		/// Name of the asset on yt-dlp GitHub releases (differs from local filename on Linux/macOS).
+		/// </summary>
+		public static string GetDownloadAsset()
+			=> PlatformExtensions.RuntimePlatform switch {
+				Platform.Windows => "yt-dlp.exe",
 				Platform.Linux   => "yt-dlp_linux",
 				Platform.MacOS   => "yt-dlp_macos",
 				_                => null
@@ -49,9 +60,28 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 
 			var targetPath = GetPath();
 
+			// Migrate legacy filename (yt-dlp_linux / yt-dlp_macos -> yt-dlp) if present
+			var legacyExecutable = PlatformExtensions.RuntimePlatform switch {
+				Platform.Linux => "yt-dlp_linux",
+				Platform.MacOS => "yt-dlp_macos",
+				_              => null
+			};
+			if (!string.IsNullOrEmpty(legacyExecutable)) {
+				var legacyPath = Path.Combine(GetFolder(), legacyExecutable);
+				if (File.Exists(legacyPath) && !File.Exists(targetPath)) {
+					try {
+						File.Move(legacyPath, targetPath);
+					} catch {
+						// fall through; will re-download below if move failed
+					}
+				}
+			}
+
 			// Check if already exists
-			if (File.Exists(targetPath))
+			if (File.Exists(targetPath)) {
+				Executable.MakeExecutable(targetPath); // ensure permissions even if file pre-exists
 				return; // Already downloaded
+			}
 
 			DownloadTokenSource = new CancellationTokenSource();
 			var cancellationToken = DownloadTokenSource.Token;
@@ -62,8 +92,9 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 				if (!Directory.Exists(folder))
 					Directory.CreateDirectory(folder);
 
-				// Determine download URL based on platform
-				var downloadUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/" + executable;
+				// Determine download URL based on platform.
+				// The asset name on GitHub differs from the local filename (yt-dlp_linux / yt-dlp_macos).
+				var downloadUrl = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/" + GetDownloadAsset();
 
 
 				using var httpClient = new HttpClient();
@@ -78,14 +109,8 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 				await contentStream.CopyToAsync(fileStream, cancellationToken);
 
 				// Make executable on Unix platforms
-				if (PlatformExtensions.RuntimePlatform != Platform.Windows) {
-					// Set execute permissions (equivalent to chmod +x)
-					var fileInfo = new FileInfo(targetPath);
-					if (fileInfo.Exists) {
-						// This is a simplified approach - in a real implementation you might want to use P/Invoke
-						// to properly set Unix file permissions
-					}
-				}
+				if (PlatformExtensions.RuntimePlatform != Platform.Windows)
+					Executable.MakeExecutable(targetPath);
 			} catch (OperationCanceledException) {
 				// Clean up partial download
 				if (File.Exists(targetPath))
@@ -111,7 +136,7 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			if (!IsDownloading)
 				return IsAvailable;
 
-			var sw = System.Diagnostics.Stopwatch.StartNew();
+			var sw = Stopwatch.StartNew();
 			while (IsDownloading) {
 				if (sw.ElapsedMilliseconds > timeout)
 					return false;
@@ -195,12 +220,11 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 				};
 
 				Logger.LogDebug($"{startInfo.FileName} {startInfo.Arguments}");
-				var process = Process.Start(startInfo);
-				if (process == null)
-					throw new InvalidOperationException("Failed to start yt-dlp process");
+				var process = Process.Start(startInfo) 
+					?? throw new InvalidOperationException("Failed to start yt-dlp process");
 
-				// Read output and error streams asynchronously
-				UniTask.RunOnThreadPool(
+                // Read output and error streams asynchronously
+                UniTask.RunOnThreadPool(
 						async () => {
 							while (!process.HasExited) {
 								cancellationToken.ThrowIfCancellationRequested();

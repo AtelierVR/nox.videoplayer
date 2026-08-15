@@ -48,8 +48,10 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			var targetPath = GetPath();
 
 			// Check if already exists
-			if (File.Exists(targetPath))
+			if (File.Exists(targetPath)) {
+				Executable.MakeExecutable(targetPath); // ensure permissions even if file pre-exists
 				return; // Already downloaded
+			}
 
 			DownloadTokenSource = new CancellationTokenSource();
 			var cancellationToken = DownloadTokenSource.Token;
@@ -183,17 +185,8 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 					using var fileStream  = new FileStream(targetPath, FileMode.Create, FileAccess.Write);
 					entryStream.CopyTo(fileStream);
 
-					// Make executable on Unix platforms (macOS)
-					if (PlatformExtensions.RuntimePlatform == Platform.MacOS) {
-						var chmodInfo = new ProcessStartInfo {
-							FileName        = "chmod",
-							Arguments       = $"+x \"{targetPath}\"",
-							UseShellExecute = false,
-							CreateNoWindow  = true
-						};
-						using var chmodProcess = Process.Start(chmodInfo);
-						chmodProcess?.WaitForExit();
-					}
+					// Make executable on Unix platforms
+					Executable.MakeExecutable(targetPath);
 
 					break;
 				}
@@ -228,16 +221,7 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			}
 
 			// Make executable on Unix platforms
-			if (File.Exists(targetPath)) {
-				var chmodInfo = new ProcessStartInfo {
-					FileName        = "chmod",
-					Arguments       = $"+x \"{targetPath}\"",
-					UseShellExecute = false,
-					CreateNoWindow  = true
-				};
-				using var chmodProcess = Process.Start(chmodInfo);
-				chmodProcess?.WaitForExit();
-			}
+			Executable.MakeExecutable(targetPath);
 		}
 
 		public static bool IsAvailable
