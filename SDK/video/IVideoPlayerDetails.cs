@@ -1,7 +1,7 @@
 namespace Nox.VideoPlayer {
 	public interface IVideoPlayerDetails {
-		public string GetTitle();
+		public string Title { get; }
 
-		public string GetSubtitle();
+		public string Subtitle { get; }
 	}
 }

@@ -1,7 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <linker>
 	<assembly fullname="Nox.CCK.VideoPlayer" preserve="all" />
-	<assembly fullname="Nox.CCK.VideoPlayer.Nox" preserve="all" />
 	<assembly fullname="Nox.CCK.VideoPlayer.Unity" preserve="all" />
 	<assembly fullname="Nox.VideoPlayer" preserve="all" />
 	<assembly fullname="Nox.VideoPlayer.Runtime" preserve="all" />

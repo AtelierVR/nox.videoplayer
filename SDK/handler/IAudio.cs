@@ -1,9 +1,9 @@
 namespace Nox.VideoPlayer {
 	public interface IAudio : IFormat {
-		public uint GetAudioChannels();
+		public uint AudioChannels { get; }
 
-		public uint GetAudioBitrate();
+		public uint AudioBitrate { get; }
 
-		public string GetAudioCodec();
+		public string AudioCodec { get; }
 	}
 }

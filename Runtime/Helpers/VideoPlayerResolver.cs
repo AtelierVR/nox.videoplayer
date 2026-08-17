@@ -34,14 +34,21 @@ namespace Nox.VideoPlayer.Runtime.Helpers {
 		private static async UniTask OnResolvingAsync(IVideoPlayer player, IFetchOptions options, Action<IFetchOptions, IResult[]> callback) {
 			await UniTask.SwitchToThreadPool();
 
-			Logger.LogDebug($"Resolving video for player {player} with options {options}");
+			Logger.LogDebug($"Resolving video for player {player?.GetType().Name} with options {options}");
 
-			var handlers = Main.Handlers
+			// Keep only the handler(s) with the highest priority — a single query
+			// should be handled by the most specific handler, not by every candidate.
+			var prioritized = Main.Handlers
 				.Select(e => (e.EstimatePriority(options), e))
 				.Where(e => e.Item1 >= 0)
-				.OrderByDescending(e => e.Item1)
-				.Select(e => e.e)
 				.ToArray();
+
+			var handlers = prioritized.Length == 0
+				? Array.Empty<IHandler>()
+				: prioritized
+					.Where(e => e.Item1 == prioritized.Max(p => p.Item1))
+					.Select(e => e.e)
+					.ToArray();
 
 			var results = new List<IResult>();
 

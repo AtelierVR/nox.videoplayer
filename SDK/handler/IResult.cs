@@ -1,11 +1,11 @@
 namespace Nox.VideoPlayer {
 	public interface IResult {
-		public bool IsError();
+		public bool IsError { get; }
 
-		public string GetError();
+		public string Message { get; }
 
 		public bool HasNext();
 
-		public IResolve[] GetData();
+		public IResolve[] Data { get; }
 	}
 }

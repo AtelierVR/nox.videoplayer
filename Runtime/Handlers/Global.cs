@@ -11,13 +11,13 @@ using Logger = Nox.CCK.Utils.Logger;
 
 namespace Nox.VideoPlayer.Runtime.Handlers {
 	public class Global : IHandler {
-		public string GetId()
+		public string Id
 			=> "global";
 
-		public string GetTitleKey()
+		public string TitleKey
 			=> "videoplayer.handler.global";
 
-		public string[] GetTitleArguments()
+		public string[] TitleArguments
 			=> new string[] { };
 
 		public static T ToObject<T>(JToken input, T @default) {
@@ -35,9 +35,9 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 		}
 
 		public int EstimatePriority(IFetchOptions options) {
-			if (IsUrl(options.GetQuery()))
+			if (IsUrl(options.Query))
 				return 1;
-			if (options.GetQuery().StartsWith("search:"))
+			if (options.Query.StartsWith("search:"))
 				return 1;
 			return -1;
 		}
@@ -57,10 +57,10 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 			try {
 				if (EstimatePriority(options) < 0)
 					return new IResult[] { Result.FromError("Cannot handle this query") };
-				var query = options.GetQuery().StartsWith("search:")
-					? options.GetQuery().Substring("search:".Length)
-					: options.GetQuery();
-				var response = await YtDl.Extract(query, cancellationToken: options.GetCancellation().Token);
+				var query = options.Query.StartsWith("search:")
+					? options.Query.Substring("search:".Length)
+					: options.Query;
+				var response = await YtDl.Extract(query, cancellationToken: options.Cancellation.Token);
 				if (response is not { Type: JTokenType.Object })
 					throw new InvalidDataException("Response from yt-dlp is not an object");
 				var type = ToObject(response["_type"], "unknown");
@@ -88,7 +88,7 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				Title      = ToObject(video["title"], ToObject(video["fulltitle"], ToObject(video["id"], ""))),
 				Thumbnails = ParseThumbnails(video["thumbnails"]),
 				Subtitles  = ParseSubtitles(video["subtitles"]),
-				Formats    = ParseFormats(video["formats"])
+				Format     = ParseFormats(video["formats"])
 			};
 		}
 

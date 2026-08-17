@@ -36,13 +36,13 @@ namespace Nox.VideoPlayer.Runtime {
 				return null;
 			}
 
-			if (string.IsNullOrWhiteSpace(handler.GetId())) {
+			if (string.IsNullOrWhiteSpace(handler.Id)) {
 				CoreAPI.LoggerAPI.LogError("Cannot register a search handler with an empty id");
 				return null;
 			}
 
-			if (Handlers.Exists(b => b.GetId() == handler.GetId())) {
-				CoreAPI.LoggerAPI.LogError($"Search handler with id {handler.GetId()} already exists");
+			if (Handlers.Exists(b => b.Id == handler.Id)) {
+				CoreAPI.LoggerAPI.LogError($"Search handler with id {handler.Id} already exists");
 				return null;
 			}
 
@@ -63,10 +63,10 @@ namespace Nox.VideoPlayer.Runtime {
 		}
 
 		public IHandler Get(string id)
-			=> Handlers.Find(b => b.GetId() == id);
+			=> Handlers.Find(b => b.Id == id);
 
 		public bool Has(string id)
-			=> Handlers.Exists(b => b.GetId() == id);
+			=> Handlers.Exists(b => b.Id == id);
 
 		private IHandler[] _handlers = Array.Empty<IHandler>();
 
@@ -95,7 +95,7 @@ namespace Nox.VideoPlayer.Runtime {
 			if (!FFmpeg.IsDownloading)
 				FFmpeg.CancelDownload();
 			foreach (var handler in Handlers.ToArray())
-				Remove(handler.GetId());
+				Remove(handler.Id);
 			Handlers.Clear();
 			_handlers = Array.Empty<IHandler>();
 			_prepareCts?.Cancel();

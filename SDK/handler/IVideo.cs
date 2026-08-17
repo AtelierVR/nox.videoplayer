@@ -2,14 +2,14 @@ using UnityEngine;
 
 namespace Nox.VideoPlayer {
 	public interface IVideo : IFormat {
-		public Vector2Int GetResolution();
+		public Vector2Int Resolution { get; }
 
-		public uint GetFramerate();
+		public uint Framerate { get; }
 
-		public uint GetVideoBitrate();
+		public uint VideoBitrate { get; }
 
-		public string GetVideoCodec();
+		public string VideoCodec { get; }
 
-		public string GetDynamicRange();
+		public string DynamicRange { get; }
 	}
 }

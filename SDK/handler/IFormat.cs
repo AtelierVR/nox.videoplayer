@@ -2,14 +2,14 @@ using System;
 
 namespace Nox.VideoPlayer {
 	public interface IFormat {
-		public string GetUrl();
+		public string Url { get; }
 
-		public string GetContainer();
+		public string Container { get; }
 
-		public string GetLanguage();
+		public string Language { get; }
 
-		public uint GetBitrate();
+		public uint Bitrate { get; }
 
-		public float GetQuality();
+		public float Quality { get; }
 	}
 }

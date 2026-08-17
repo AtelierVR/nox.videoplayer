@@ -3,11 +3,11 @@ using UnityEngine;
 
 namespace Nox.VideoPlayer {
 	public interface IThumbnail {
-		public string GetUrl();
+		public string Url { get; }
 
-		public string GetLanguage();
+		public string Language { get; }
 
-		public Vector2Int GetResolution();
+		public Vector2Int Resolution { get; }
 
 		public UniTask<Texture2D> Fetch();
 	}

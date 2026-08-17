@@ -3,11 +3,11 @@ using UnityEngine;
 
 namespace Nox.VideoPlayer {
 	public interface IHandler {
-		public string GetId();
+		public string Id { get; }
 
-		public string GetTitleKey();
+		public string TitleKey { get; }
 
-		public string[] GetTitleArguments();
+		public string[] TitleArguments { get; }
 
 		public int EstimatePriority(IFetchOptions options);
 

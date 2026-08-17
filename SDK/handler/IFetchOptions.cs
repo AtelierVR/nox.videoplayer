@@ -3,13 +3,13 @@ using System.Threading;
 
 namespace Nox.VideoPlayer {
 	public interface IFetchOptions {
-		public string GetQuery();
+		public string Query { get; set; }
 
-		public uint GetPage();
-		public uint GetLimit();
+		public uint Page { get; set; }
+		public uint Limit { get; set; }
 
-		public Dictionary<string, object> GetFilters();
+		public Dictionary<string, object> Filters { get; set; }
 
-		public CancellationTokenSource GetCancellation();
+		public CancellationTokenSource Cancellation { get; set; }
 	}
 }

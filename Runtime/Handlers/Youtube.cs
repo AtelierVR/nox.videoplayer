@@ -13,19 +13,19 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 	public class Youtube : IHandler {
 		public const string SearchPrefix = "youtube:";
 
-		public string GetId()
+		public string Id
 			=> "youtube";
 
-		public string GetTitleKey()
+		public string TitleKey
 			=> "videoplayer.handler.youtube";
 
-		public string[] GetTitleArguments()
+		public string[] TitleArguments
 			=> new string[] { };
 
 		public int EstimatePriority(IFetchOptions options) {
-			if (IsUrl(options.GetQuery()))
+			if (IsUrl(options.Query))
 				return 100;
-			if (options.GetQuery().StartsWith(SearchPrefix))
+			if (options.Query.StartsWith(SearchPrefix))
 				return 10;
 			return -1;
 		}
@@ -56,12 +56,12 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				if (EstimatePriority(options) < 0)
 					return new IResult[] { Result.FromError("Cannot handle this query") };
 
-				var searchQuery = options.GetQuery().StartsWith(SearchPrefix)
-					? options.GetQuery().Substring(SearchPrefix.Length)
-					: options.GetQuery();
-				var response = IsUrl(options.GetQuery())
-					? await YtDl.Extract(FormatUrl(options.GetQuery()), cancellationToken: options.GetCancellation().Token)
-					: await YtDl.Extract($"ytsearch{options.GetLimit()}:{searchQuery}", cancellationToken: options.GetCancellation().Token);
+				var searchQuery = options.Query.StartsWith(SearchPrefix)
+					? options.Query.Substring(SearchPrefix.Length)
+					: options.Query;
+				var response = IsUrl(options.Query)
+					? await YtDl.Extract(FormatUrl(options.Query), cancellationToken: options.Cancellation.Token)
+					: await YtDl.Extract($"ytsearch{options.Limit}:{searchQuery}", cancellationToken: options.Cancellation.Token);
 
 				if (response is not { Type: JTokenType.Object })
 					throw new InvalidDataException("Response from yt-dlp is not an object");
@@ -95,7 +95,7 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				Title      = video["title"]?.ToString() ?? video["fulltitle"]?.ToString() ?? video["id"]?.ToString(),
 				Thumbnails = ParseThumbnails(video["thumbnails"]),
 				Subtitles  = ParseSubtitles(video["subtitles"]),
-				Formats    = ParseFormats(video["formats"])
+				Format     = ParseFormats(video["formats"])
 			};
 		}
 

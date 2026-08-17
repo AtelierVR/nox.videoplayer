@@ -133,13 +133,13 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 				return;
 			var details = player is IVideoPlayerDetails det ? det : null;
 
-			var t = details?.GetTitle();
+			var t = details?.Title;
 			if (string.IsNullOrEmpty(t))
 				title.UpdateText("video_player.no_title");
 			else
 				title.UpdateText("video_player.title", new[] { t });
 
-			var s = details?.GetSubtitle();
+			var s = details?.Subtitle;
 			if (string.IsNullOrEmpty(s))
 				subtitle.UpdateText("video_player.no_subtitle");
 			else

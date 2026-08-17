@@ -1,18 +1,18 @@
 namespace Nox.VideoPlayer {
 	public interface IResolve {
-		public string GetId();
+		public string Id { get; }
 
-		public string GetTile();
+		public string Title { get; }
 
-		public string GetSubtitle();
+		public string Subtitle { get; }
 
-		public string GetDescription();
+		public string Description { get; }
 
-		public IThumbnail[] GetThumbnails();
+		public IThumbnail[] Thumbnails { get; }
 
-		public IFormat[] GetFormat();
+		public IFormat[] Format { get; }
 
-		public ISubtitle[] GetSubtitles();
+		public ISubtitle[] Subtitles { get; }
 
 		public (IFormat, IFormat) FindQuality(float quality = -1);
 	}

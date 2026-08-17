@@ -4,20 +4,17 @@ using Nox.VideoPlayer;
 
 namespace Nox.VideoPlayer.Runtime.Base {
 	public class Result : IResult {
-		public string       Error = null;
-		public Resolve[] Data  = null;
+		public string     Error { get; set; } = null;
+		public IResolve[] Data  { get; set; } = null;
 
-		public bool IsError()
+		public bool IsError
 			=> !string.IsNullOrEmpty(Error);
 
-		public string GetError()
+		public string Message
 			=> Error;
 
 		public bool HasNext()
 			=> false;
-
-		public IResolve[] GetData()
-			=> Data.Cast<IResolve>().ToArray();
 
 		public static Result FromError(string error)
 			=> new() {

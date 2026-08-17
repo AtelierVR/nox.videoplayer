@@ -2,11 +2,11 @@ using Cysharp.Threading.Tasks;
 
 namespace Nox.VideoPlayer {
 	public interface ISubtitle {
-		public string GetUrl();
+		public string Url { get; }
 
-		public string GetLanguage();
+		public string Language { get; }
 
-		public string GetTitle();
+		public string Title { get; }
 
 		public UniTask<ISubtitleContent[]> Fetch();
 	}
