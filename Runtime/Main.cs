@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using Nox.CCK.Language;
 using Nox.CCK.Mods.Cores;
 using Nox.CCK.Mods.Initializers;
+using Nox.VideoPlayer.Runtime.Commands;
 using Nox.VideoPlayer.Runtime.Handlers;
 using Nox.VideoPlayer.Runtime.Helpers;
 using Nox.VideoPlayer.Runtime.Processors;
@@ -69,6 +70,7 @@ namespace Nox.VideoPlayer.Runtime {
 			=> Handlers.Exists(b => b.Id == id);
 
 		private IHandler[] _handlers = Array.Empty<IHandler>();
+		private VideoPlayerCommands _commands;
 
 		public void OnInitializeMain(IMainModCoreAPI api) {
 			Instance = this;
@@ -85,9 +87,13 @@ namespace Nox.VideoPlayer.Runtime {
 			};
 			foreach (var handler in _handlers)
 				Add(handler);
+
+			_commands = new VideoPlayerCommands();
 		}
 
 		public void OnDisposeMain() {
+			_commands?.Dispose();
+			_commands = null;
 			VideoPlayerResolver.UnListen();
 			VideoPlayerManager.UnListen();
 			if (!YtDl.IsDownloading)

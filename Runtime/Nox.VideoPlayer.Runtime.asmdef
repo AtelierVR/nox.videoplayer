@@ -1,7 +1,21 @@
 ﻿{
     "name": "Nox.VideoPlayer.Runtime",
     "rootNamespace": "",
-    "references": ["Nox.CCK","UniTask","Nox.VideoPlayer","Nox.CCK.VideoPlayer","Nox.UI"],
-    "includePlatforms": [],"excludePlatforms": [],"allowUnsafeCode": false,"overrideReferences": false,
-    "precompiledReferences": [],"autoReferenced": true,"defineConstraints": [],"versionDefines": [],"noEngineReferences": false
+    "references": [
+        "Nox.CCK",
+        "UniTask",
+        "Nox.VideoPlayer",
+        "Nox.CCK.VideoPlayer",
+        "Nox.UI",
+        "Nox.Terminal"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
+    ,"overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }
