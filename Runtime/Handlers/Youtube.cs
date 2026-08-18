@@ -8,6 +8,7 @@ using Nox.VideoPlayer.Runtime.Base;
 using Nox.VideoPlayer.Runtime.Processors;
 using UnityEngine;
 using Logger = Nox.CCK.Utils.Logger;
+using System.Text.RegularExpressions;
 
 namespace Nox.VideoPlayer.Runtime.Handlers {
 	public class Youtube : IHandler {
@@ -30,12 +31,17 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 			return -1;
 		}
 
-		private static bool IsUrl(string query)
-			=> query.StartsWith("https://www.youtube.com/watch")
-				|| query.StartsWith("https://music.youtube.com/watch")
-				|| query.StartsWith("https://youtu.be/");
+		private static readonly Regex YoutubeUrlRegex = new(
+    		@"^https://(www\.|music\.)?youtube\.com/watch|^https://youtu\.be/",
+    		RegexOptions.Compiled | RegexOptions.IgnoreCase
+		);
 
-		private static string FormatUrl(string original) {
+		private static bool IsUrl(string query)
+			=> YoutubeUrlRegex.IsMatch(query);
+
+		private static string FormatUrl(string original) 
+			=> original;
+		/*{
 			var id = "";
 
 			if (original.StartsWith("https://www.youtube.com/watch")
@@ -49,7 +55,7 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 			}
 
 			return $"https://www.youtube.com/watch?v={id}";
-		}
+		}*/
 
 		public async UniTask<IResult[]> Fetch(IFetchOptions options) {
 			try {

@@ -35,6 +35,13 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 		public static string GetConfigArguments()
 			=> Config.Load().Get("settings.ytdlp.arguments", "");
 
+		/// <summary>
+		/// Whether debug logging of yt-dlp output is enabled (settings.ytdlp.debug or ytdlp.debug).
+		/// </summary>
+		public static bool IsDebugEnabled()
+			=> Config.Load().Get("settings.ytdlp.debug", false)
+				|| Config.Load().Get("ytdlp.debug", false);
+
 		public static string GetPath()
 			=> Path.Combine(GetFolder(), GetExecutable());
 
@@ -212,7 +219,7 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 				var startInfo = new ProcessStartInfo {
 					FileName = path,
 					Arguments = (string.IsNullOrEmpty(arg) ? "" : $"{arg} ")
-						+ $"--no-warnings -J \"{url}\"", // -J for JSON output
+						+ $"-q --no-playlist --flat-playlist --no-warnings -J \"{url}\"", // -J for JSON output
 					UseShellExecute        = false,
 					RedirectStandardOutput = true,
 					RedirectStandardError  = true,
@@ -293,7 +300,20 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			if (string.IsNullOrEmpty(outputStr))
 				throw new InvalidOperationException("yt-dlp returned no output");
 
-			return JObject.Parse(outputStr);
+			var result = JObject.Parse(outputStr);
+
+			// Write the extracted data to disk for debugging purposes.
+			if (IsDebugEnabled())
+				try {
+					await File.WriteAllTextAsync(
+						Path.Combine(GetFolder(), "last_extracted.json"),
+						result.ToString(Newtonsoft.Json.Formatting.Indented)
+					);
+				} catch {
+					// Debug logging must never break extraction.
+				}
+
+			return result;
 		}
 
 		public static async UniTask Update(CancellationToken cancellationToken = default) {
