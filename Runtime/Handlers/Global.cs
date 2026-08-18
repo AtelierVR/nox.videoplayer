@@ -145,6 +145,7 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				fmt.Language  = ToObject(format["language"], "");
 				fmt.Bitrate   = ToObject(format["bitrate"], 0u);
 				fmt.Quality   = ToObject(format["quality"], 0f);
+				fmt.Headers   = ToObject(format["http_headers"], new Dictionary<string, string>());
 
 				if (fmt is AudioVideoFormat or VideoFormat) {
 					fmt.Resolution = new Vector2Int(

@@ -1,10 +1,12 @@
-using Nox.VideoPlayer;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Nox.VideoPlayer.Runtime.Base {
 	public class Format : IFormat {
 		// Common
 		public string Url       { get; set; }
+		public Dictionary<string, string> Headers { get; set; }
+
 		public string Container { get; set; }
 		public string Language  { get; set; }
 		public uint   Bitrate   { get; set; }
@@ -28,9 +30,15 @@ namespace Nox.VideoPlayer.Runtime.Base {
 			// Comparer d'abord par qualité
 			var qualityComparison = Quality.CompareTo(other.Quality);
 			if (qualityComparison != 0) return qualityComparison;
-			
+
 			// Puis par bitrate si les qualités sont égales
-			return Bitrate.CompareTo(other.Bitrate);
+			var bitrateComparaison = Bitrate.CompareTo(other.Bitrate);
+			if (bitrateComparaison != 0) return bitrateComparaison;
+
+			var headersComparaison = Headers.GetHashCode() - other.Headers.GetHashCode();
+			if (headersComparaison != 0) return headersComparaison;
+
+			return 0;
 		}
 	}
 }

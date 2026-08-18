@@ -119,6 +119,16 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			_component?.UpdatePlayStatus(player, isPlaying);
 		}
 
+        public void OnTexture(IVideoPlayer player, Texture2D _) {
+			if (player == null || player.GetId() != _selected) return;
+			_component?.UpdateRender(player);
+        }
+
+        public void OnResolution(IVideoPlayer player, Vector2Int _) {
+			if (player == null || player.GetId() != _selected) return;
+			_component?.UpdateRender(player);
+        }
+
 		public void TogglePlayPause() {
 			var player = GetSelectedPlayer();
 			if (player == null) return;
@@ -126,7 +136,8 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 				player.Pause();
 			else player.Resume();
 		}
-	}
+
+    }
 
 	public class UiPlayer : IDisposable {
 		public IVideoPlayer    Player;
@@ -139,14 +150,22 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			Player.OnPause.AddListener(OnState);
 			Player.OnResume.AddListener(OnState);
 			Player.OnStop.AddListener(OnState);
+			if (Player is IVideoPlayerTexture pt)
+				pt.OnTexture.AddListener(OnTexture);
+			if (Player is IVideoPlayerResolution pr)
+				pr.OnResolution.AddListener(OnResolution); 
 			Logger.Log($"[VideoPlayerPage] Player {player.GetId()} added to UI");
 		}
 
-		public void Dispose() {
+        public void Dispose() {
 			Player.OnPlay.RemoveListener(OnState);
 			Player.OnPause.RemoveListener(OnState);
 			Player.OnResume.RemoveListener(OnState);
 			Player.OnStop.RemoveListener(OnState);
+			if (Player is IVideoPlayerTexture pt)
+				pt.OnTexture.RemoveListener(OnTexture);
+			if (Player is IVideoPlayerResolution pr)
+				pr.OnResolution.RemoveListener(OnResolution); 
 			Logger.Log($"[VideoPlayerPage] Player {Player.GetId()} removed from UI");
 		}
 
@@ -155,5 +174,11 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 
 		public void OnProgress(IVideoPlayer _, double progress)
 			=> Page.OnProgress(Player, progress);
+
+        private void OnTexture(IVideoPlayer _, Texture2D texture)
+			=> Page.OnTexture(Player, texture);
+
+        private void OnResolution(IVideoPlayer _, Vector2Int resolution)
+			=> Page.OnResolution(Player, resolution);
 	}
 }

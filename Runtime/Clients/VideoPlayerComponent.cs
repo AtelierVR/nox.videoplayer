@@ -90,7 +90,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		}
 
 		private static void FormatTime(TextLanguage text, double time) {
-			if (time < 0)
+			if (double.IsNaN(time) || double.IsInfinity(time) || time < 0)
 				time = 0;
 			var ts = System.TimeSpan.FromSeconds(time);
 			text.UpdateText(
@@ -109,7 +109,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		private void Update()
 			=> _page.OnUpdate();
 
-		private void UpdateRender(IVideoPlayer player) {
+		public void UpdateRender(IVideoPlayer player) {
 			var render = player is IVideoPlayerTexture tex ? tex.Texture : null;
 			if (!render)
 				return;
@@ -152,8 +152,10 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			var player = _page.GetSelectedPlayer();
 			if (player == null)
 				return;
-			var newSeek = player.Duration * value;
-			player.Time           = newSeek;
+			var duration = player.Duration;
+			if (double.IsNaN(duration) || duration <= 0)
+				return;
+			player.Time           = duration * value;
 			_wasPlayingBeforeSeek = player.IsPlaying;
 			if (_wasPlayingBeforeSeek) {
 				player.Pause();
@@ -169,7 +171,9 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			var player = _page.GetSelectedPlayer();
 			if (player == null)
 				return;
-			player.Time = seek.value * player.Duration;
+			var duration = player.Duration;
+			if (!double.IsNaN(duration) && duration > 0)
+				player.Time = seek.value * duration;
 			if (_wasPlayingBeforeSeek)
 				player.Resume();
 			UpdateProgress(player, seek.value);
@@ -179,7 +183,9 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			var player = _page.GetSelectedPlayer();
 			if (player == null)
 				return;
-			player.Time = seek.value * player.Duration;
+			var duration = player.Duration;
+			if (!double.IsNaN(duration) && duration > 0)
+				player.Time = seek.value * duration;
 			UpdateProgress(player, seek.value);
 		}
 	}
