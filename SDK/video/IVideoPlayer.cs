@@ -1,36 +1,16 @@
-using System;
-using UnityEngine;
 using UnityEngine.Events;
+using LogType = Nox.CCK.Utils.LogType;
 
 namespace Nox.VideoPlayer {
 	public interface IVideoPlayer {
 		#region Debug
 
 		/// <summary>
-		/// Event invoked when an error occurs.
-		/// </summary>
-		public UnityEvent<IVideoPlayer, Exception> OnError { get; }
-
-		/// <summary>
 		/// Event invoked for debug messages.
 		/// </summary>
-		public UnityEvent<IVideoPlayer, string> OnMessage { get; }
+		public UnityEvent<IVideoPlayer, LogType, string> OnMessage { get; }
 
 		#endregion Debug
-
-		#region Volume
-
-		/// <summary>
-		/// The current volume of the video player (0.0 to 1.0).
-		/// </summary>
-		public float Volume { get; set; }
-
-		/// <summary>
-		/// Event invoked when the volume changes.
-		/// </summary>
-		public UnityEvent<IVideoPlayer, float> OnVolume { get; }
-
-		#endregion Volume
 
 		#region Time
 
@@ -70,12 +50,29 @@ namespace Nox.VideoPlayer {
 
 		#endregion Loop
 
+		#region Stream
+
+		/// <summary>
+		/// Event invoked when the player switches to another stream: a new media has been
+		/// opened, or another track has been selected. Use it to refresh everything that
+		/// depends on the stream (duration, resolution, tracks…) once, instead of polling
+		/// it every frame.
+		/// </summary>
+		public UnityEvent<IVideoPlayer> OnStream { get; }
+
+		#endregion Stream
+
 		#region Actions
 		
 		/// <summary>
-		/// Whether a video is currently playing.
+		/// The current state of the video player.
 		/// </summary>
-		public bool IsPlaying { get; }
+		public State State { get; }
+
+		/// <summary>
+		/// Event invoked when the video player state changes.
+		/// </summary>
+		public UnityEvent<IVideoPlayer, State> OnState { get; }
 
 		/// <summary>
 		/// Play a video from the given query (URL or file path).
@@ -97,26 +94,6 @@ namespace Nox.VideoPlayer {
 		/// Stop the currently playing video.
 		/// </summary>
 		public void Stop();
-
-		/// <summary>
-		/// Event invoked when a video starts playing.
-		/// </summary>
-		public UnityEvent<IVideoPlayer> OnPlay { get; }
-
-		/// <summary>
-		/// Event invoked when a video is paused.
-		/// </summary>
-		public UnityEvent<IVideoPlayer> OnPause { get; }
-
-		/// <summary>
-		/// Event invoked when a video is resumed.
-		/// </summary>
-		public UnityEvent<IVideoPlayer> OnResume { get; }
-
-		/// <summary>
-		/// Event invoked when a video is stopped.
-		/// </summary>
-		public UnityEvent<IVideoPlayer> OnStop { get; }
 
 		#endregion Actions
 	}

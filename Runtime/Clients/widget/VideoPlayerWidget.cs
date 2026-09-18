@@ -62,7 +62,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 				return;
 			}
 
-			var texture = videoplayer is IVideoPlayerTexture vpt
+			var texture = videoplayer is IVideoPlayerVideo vpt
 				? vpt.Texture
 				: null;
 

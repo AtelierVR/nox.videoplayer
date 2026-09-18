@@ -3,7 +3,6 @@ using System.Linq;
 using System.Reflection;
 using Cysharp.Threading.Tasks;
 using Nox.Terminal;
-using Nox.VideoPlayer;
 using Nox.VideoPlayer.Runtime.Helpers;
 
 namespace Nox.VideoPlayer.Runtime.Commands {
@@ -124,9 +123,12 @@ namespace Nox.VideoPlayer.Runtime.Commands {
 			if (player is IVideoPlayerDetails details)
 				context.PrintLn($"Subtitle:   {details.Subtitle}");
 			context.PrintLn($"URL:        {GetUrl(player) ?? "<none>"}");
-			context.PrintLn($"Playing:    {player.IsPlaying}");
+			context.PrintLn($"State:      {player.State}");
 			context.PrintLn($"Time:       {Format(player.Time)} / {Format(player.Duration)} ({FormatPercent(player.Progress)})");
-			context.PrintLn($"Volume:     {player.Volume:0.00}");
+			if (player is IVideoPlayerAudio audio) {
+				context.PrintLn($"Volume:     {audio.Volume:0.00}");
+				context.PrintLn($"Muted:      {audio.Muted:0.00}");
+			}
 			context.PrintLn($"Loop:       {player.Loop}");
 		}
 
@@ -136,7 +138,7 @@ namespace Nox.VideoPlayer.Runtime.Commands {
 
 			switch (status) {
 				case "play":
-					if (player.IsPlaying) {
+					if (player.State == State.Playing) {
 						context.PrintLn("Already playing.");
 						return;
 					}
