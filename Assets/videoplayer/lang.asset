@@ -27,3 +27,5 @@ MonoBehaviour:
       value: ""
     - key: video_player.no_subtitle
       value: ""
+    - key: video_player.live
+      value: "Live"

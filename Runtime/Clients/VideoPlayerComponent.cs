@@ -19,11 +19,23 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		public TextLanguage title;
 		public TextLanguage subtitle;
 
+		[Header("Bottom bar")]
+		[Tooltip("Bar shown for a media with a duration (Reference 'video_player.media_container').")]
+		public GameObject mediaContainer;
+		[Tooltip("Bar shown for a live stream: no total, no seek bar (Reference 'video_player.live_container').")]
+		public GameObject liveContainer;
+		[Tooltip("Elapsed time of the live bar.")]
+		public TextLanguage liveCurrent;
+
 		private float _targetSeekValue;
 
 		// Variables pour gérer le seek par l'utilisateur
 		private bool _isUserSeeking;
 		private bool _wasPlayingBeforeSeek;
+		private bool _live;
+
+		/// Player whose bottom bar has already been resolved (see <see cref="UpdateStream"/>).
+		private IVideoPlayer _streamPlayer;
 
 		public static (GameObject, VideoPlayerComponent) Generate(VideoPlayerPage page, RectTransform parent) {
 			var content = Instantiate(Client.GetAsset<GameObject>("ui:prefabs/split.prefab"), parent);
@@ -67,29 +79,46 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			component.title    = Reference.GetComponent<TextLanguage>("title", container);
 			component.subtitle = Reference.GetComponent<TextLanguage>("subtitle", container);
 
+			// bottom bar: the media (seek) and live variants are exclusive
+			component.mediaContainer = Reference.GetReference("video_player.media_container", videoPlayer);
+			component.liveContainer  = Reference.GetReference("video_player.live_container", videoPlayer);
+			component.liveCurrent    = FindLiveTime(component.liveContainer);
+
 			return (content, component);
 		}
 
 		public void UpdateProgress(IVideoPlayer player, double progress) {
 			if (player == null)
 				return;
-			if (!_isUserSeeking)
+
+			// no duration (live): no seek bar, no total, only the elapsed time
+			if (_live) {
+				FormatTime(liveCurrent, player.Time);
+				return;
+			}
+
+			if (!_isUserSeeking && seek)
 				seek.SetValueWithoutNotify((float)progress);
-			loaded.value = 0;
+			if (loaded)
+				loaded.value = 0;
 			FormatTime(current, player.Time);
 			FormatTime(total, player.Duration);
 		}
 
-		public void UpdatePlayStatus(IVideoPlayer player, bool isPlaying) {
+		public void UpdatePlayStatus(IVideoPlayer player, State state) {
 			if (player == null)
 				return;
-			var iconName = isPlaying ? "ui:icons/pause.png" : "ui:icons/play_arrow.png";
+			var iconName = state == State.Playing 
+				? "ui:icons/pause.png" 
+				: "ui:icons/play_arrow.png";
 			var icon     = Client.GetAsset<Sprite>(iconName);
 			if (icon)
 				centerIcon.sprite = icon;
 		}
 
 		private static void FormatTime(TextLanguage text, double time) {
+			if (!text)
+				return;
 			if (double.IsNaN(time) || double.IsInfinity(time) || time < 0)
 				time = 0;
 			var ts = System.TimeSpan.FromSeconds(time);
@@ -109,9 +138,50 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		private void Update()
 			=> _page.OnUpdate();
 
+		// ── Bottom bar (media / live) ─────────────────────────────────────
+
+		/// <summary>
+		/// Called when the player opens another stream (Play, track change…): the
+		/// duration is only known at that moment, so this is where the bottom bar is
+		/// resolved — no need to check it every frame.
+		/// </summary>
+		public void UpdateStream(IVideoPlayer player) {
+			_streamPlayer = player;
+			SetLive(player != null && IsStream(player));
+		}
+
+		/// <summary>
+		/// Whether the player plays a live stream, i.e. a stream without a duration
+		/// (see <see cref="IVideoPlayerDetails.IsStream"/>).
+		/// </summary>
+		private static bool IsStream(IVideoPlayer player)
+			=> player is IVideoPlayerDetails details && details.IsStream;
+
+		private void SetLive(bool live) {
+			_live = live;
+			if (mediaContainer && mediaContainer.activeSelf == live)
+				mediaContainer.SetActive(!live);
+			if (liveContainer && liveContainer.activeSelf != live)
+				liveContainer.SetActive(live);
+		}
+
+		/// <summary>
+		/// Elapsed time of the live bar: a <c>video_player.live_current</c> Reference
+		/// inside the container, or its first child named <c>current</c>.
+		/// </summary>
+		private static TextLanguage FindLiveTime(GameObject live) {
+			if (!live)
+				return null;
+			var keyed = Reference.GetComponent<TextLanguage>("video_player.live_current", live);
+			if (keyed)
+				return keyed;
+			var child = live.transform.Find("current");
+			return child ? child.GetComponent<TextLanguage>() : null;
+		}
+
 		public void UpdateRender(IVideoPlayer player) {
-			var render = player is IVideoPlayerTexture tex ? tex.Texture : null;
-			if (!render)
+			var render = player is IVideoPlayerVideo tex ? tex.Texture : null;
+			if (!render || !video || !ratio)
 				return;
 			video.material.mainTexture = render;
 			ratio.aspectRatio          = (float)render.width / render.height;
@@ -123,8 +193,10 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			var player = _page.GetSelectedPlayer();
 			if (player == null)
 				return;
+			if (player != _streamPlayer)
+				UpdateStream(player); // another player is displayed: its bar may differ
 			UpdateRender(player);
-			UpdatePlayStatus(player, player.IsPlaying);
+			UpdatePlayStatus(player, player.State);
 			UpdateProgress(player, player.Progress);
 			UpdateTitle(player);
 		}
@@ -147,7 +219,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		}
 
 		private void OnSeekValueChanged(float value) {
-			if (_isUserSeeking)
+			if (_isUserSeeking || _live || !seek)
 				return;
 			var player = _page.GetSelectedPlayer();
 			if (player == null)
@@ -156,7 +228,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			if (double.IsNaN(duration) || duration <= 0)
 				return;
 			player.Time           = duration * value;
-			_wasPlayingBeforeSeek = player.IsPlaying;
+			_wasPlayingBeforeSeek = player.State == State.Playing;
 			if (_wasPlayingBeforeSeek) {
 				player.Pause();
 			}
@@ -169,7 +241,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		public void OnSeekEnd() {
 			_isUserSeeking = false;
 			var player = _page.GetSelectedPlayer();
-			if (player == null)
+			if (player == null || _live || !seek)
 				return;
 			var duration = player.Duration;
 			if (!double.IsNaN(duration) && duration > 0)
@@ -181,7 +253,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 
 		public void OnSeekDrag() {
 			var player = _page.GetSelectedPlayer();
-			if (player == null)
+			if (player == null || _live || !seek)
 				return;
 			var duration = player.Duration;
 			if (!double.IsNaN(duration) && duration > 0)

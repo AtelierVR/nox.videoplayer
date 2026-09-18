@@ -114,9 +114,14 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			_component?.UpdateProgress(player, progress);
 		}
 
-		public void OnPlayStatusChanged(IVideoPlayer player, bool isPlaying) {
+		public void OnStream(IVideoPlayer player) {
 			if (player == null || player.GetId() != _selected) return;
-			_component?.UpdatePlayStatus(player, isPlaying);
+			_component?.UpdateStream(player);
+		}
+
+		public void OnPlayStatusChanged(IVideoPlayer player, State state) {
+			if (player == null || player.GetId() != _selected) return;
+			_component?.UpdatePlayStatus(player, state);
 		}
 
         public void OnTexture(IVideoPlayer player, Texture2D _) {
@@ -132,7 +137,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		public void TogglePlayPause() {
 			var player = GetSelectedPlayer();
 			if (player == null) return;
-			if (player.IsPlaying)
+			if (player.State == State.Playing)
 				player.Pause();
 			else player.Resume();
 		}
@@ -146,11 +151,9 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		public UiPlayer(IVideoPlayer player, VideoPlayerPage page) {
 			Player = player;
 			Page   = page;
-			Player.OnPlay.AddListener(OnState);
-			Player.OnPause.AddListener(OnState);
-			Player.OnResume.AddListener(OnState);
-			Player.OnStop.AddListener(OnState);
-			if (Player is IVideoPlayerTexture pt)
+			Player.OnState.AddListener(OnState);
+			Player.OnStream.AddListener(OnStream);
+			if (Player is IVideoPlayerVideo pt)
 				pt.OnTexture.AddListener(OnTexture);
 			if (Player is IVideoPlayerResolution pr)
 				pr.OnResolution.AddListener(OnResolution); 
@@ -158,19 +161,20 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		}
 
         public void Dispose() {
-			Player.OnPlay.RemoveListener(OnState);
-			Player.OnPause.RemoveListener(OnState);
-			Player.OnResume.RemoveListener(OnState);
-			Player.OnStop.RemoveListener(OnState);
-			if (Player is IVideoPlayerTexture pt)
+			Player.OnState.RemoveListener(OnState);
+			Player.OnStream.RemoveListener(OnStream);
+			if (Player is IVideoPlayerVideo pt)
 				pt.OnTexture.RemoveListener(OnTexture);
 			if (Player is IVideoPlayerResolution pr)
 				pr.OnResolution.RemoveListener(OnResolution); 
 			Logger.Log($"[VideoPlayerPage] Player {Player.GetId()} removed from UI");
 		}
 
-		public void OnState(IVideoPlayer _)
-			=> Page.OnPlayStatusChanged(Player, Player.IsPlaying);
+        private void OnState(IVideoPlayer _, State state)
+			=> Page.OnPlayStatusChanged(Player, state);
+
+		private void OnStream(IVideoPlayer _)
+			=> Page.OnStream(Player);
 
 		public void OnProgress(IVideoPlayer _, double progress)
 			=> Page.OnProgress(Player, progress);
