@@ -29,6 +29,18 @@
       "type": "depends",
       "version": ">=1.0.0",
       "register": "git+https://github.com/AtelierVR/nox.ui.git"
+    },
+    {
+      "id": "terminal",
+      "type": "depends",
+      "version": ">=1.0.0",
+      "register": "git+https://github.com/AtelierVR/nox.terminal.git"
+    }
+  ],
+  "constraints": [
+    {
+      "type": "after",
+      "id": "terminal"
     }
   ],
   "entrypoints": {
