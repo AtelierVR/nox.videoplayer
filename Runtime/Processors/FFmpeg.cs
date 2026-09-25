@@ -14,13 +14,12 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 		public static string GetFolder()
 			=> Path.Combine(Constants.ConfigPath, "ffmpeg");
 
-		public static string GetExecutable()
-			=> PlatformExtensions.RuntimePlatform switch {
-				Platform.Windows => "ffmpeg.exe",
-				Platform.Linux   => "ffmpeg",
-				Platform.MacOS   => "ffmpeg",
-				_                => null
-			};
+		public static string GetExecutable() {
+			var platform = PlatformExtensions.RuntimePlatform;
+			if (platform == Platform.Windows) return "ffmpeg.exe";
+			if (platform == Platform.Linux || platform == Platform.MacOS) return "ffmpeg";
+			return null;
+		}
 
 		public static string GetPath()
 			=> Path.Combine(GetFolder(), GetExecutable());
@@ -129,12 +128,14 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 		}
 
 		private static string GetDownloadUrl() {
-			return PlatformExtensions.RuntimePlatform switch {
-				Platform.Windows => "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
-				Platform.Linux   => "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz",
-				Platform.MacOS   => null, // Will be determined dynamically via API
-				_                => throw new PlatformNotSupportedException("Platform not supported")
-			};
+			var platform = PlatformExtensions.RuntimePlatform;
+			if (platform == Platform.Windows)
+				return "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip";
+			if (platform == Platform.Linux)
+				return "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz";
+			if (platform == Platform.MacOS)
+				return null; // Will be determined dynamically via API
+			throw new PlatformNotSupportedException("Platform not supported");
 		}
 
 		public class FfMpegDownloadInfo {

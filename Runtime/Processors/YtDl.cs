@@ -13,24 +13,23 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 		public static string GetFolder()
 			=> Path.Combine(Constants.ConfigPath, "ytdlp");
 
-		public static string GetExecutable()
-			=> PlatformExtensions.RuntimePlatform switch {
-				Platform.Windows => "yt-dlp.exe",
-				Platform.Linux   => "yt-dlp",
-				Platform.MacOS   => "yt-dlp",
-				_                => null
-			};
+		public static string GetExecutable() {
+			var platform = PlatformExtensions.RuntimePlatform;
+			if (platform == Platform.Windows) return "yt-dlp.exe";
+			if (platform == Platform.Linux || platform == Platform.MacOS) return "yt-dlp";
+			return null;
+		}
 
 		/// <summary>
 		/// Name of the asset on yt-dlp GitHub releases (differs from local filename on Linux/macOS).
 		/// </summary>
-		public static string GetDownloadAsset()
-			=> PlatformExtensions.RuntimePlatform switch {
-				Platform.Windows => "yt-dlp.exe",
-				Platform.Linux   => "yt-dlp_linux",
-				Platform.MacOS   => "yt-dlp_macos",
-				_                => null
-			};
+		public static string GetDownloadAsset() {
+			var platform = PlatformExtensions.RuntimePlatform;
+			if (platform == Platform.Windows) return "yt-dlp.exe";
+			if (platform == Platform.Linux)   return "yt-dlp_linux";
+			if (platform == Platform.MacOS)   return "yt-dlp_macos";
+			return null;
+		}
 
 		public static string GetConfigArguments()
 			=> Config.Load().Get("settings.ytdlp.arguments", "");
@@ -68,11 +67,10 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			var targetPath = GetPath();
 
 			// Migrate legacy filename (yt-dlp_linux / yt-dlp_macos -> yt-dlp) if present
-			var legacyExecutable = PlatformExtensions.RuntimePlatform switch {
-				Platform.Linux => "yt-dlp_linux",
-				Platform.MacOS => "yt-dlp_macos",
-				_              => null
-			};
+			var runtimePlatform = PlatformExtensions.RuntimePlatform;
+			var legacyExecutable = runtimePlatform == Platform.Linux ? "yt-dlp_linux"
+				: runtimePlatform == Platform.MacOS ? "yt-dlp_macos"
+				: null;
 			if (!string.IsNullOrEmpty(legacyExecutable)) {
 				var legacyPath = Path.Combine(GetFolder(), legacyExecutable);
 				if (File.Exists(legacyPath) && !File.Exists(targetPath)) {
