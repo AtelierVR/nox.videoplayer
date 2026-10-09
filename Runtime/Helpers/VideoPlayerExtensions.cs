@@ -1,4 +1,4 @@
-using Nox.VideoPlayer;
+using Nox.CCK.Utils;
 using UnityEngine;
 
 namespace Nox.VideoPlayer.Runtime.Helpers {
@@ -7,6 +7,6 @@ namespace Nox.VideoPlayer.Runtime.Helpers {
 			=> self is MonoBehaviour mb ? mb.gameObject : null;
 
 		public static int GetId(this IVideoPlayer self)
-			=> self.GetGameObject().GetEntityId().GetHashCode();
+			=> self.GetGameObject().GetId();
 	}
 }

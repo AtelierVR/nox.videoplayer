@@ -42,7 +42,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 
 			var component = content.AddComponent<VideoPlayerComponent>();
 			component._page = page;
-			content.name    = $"[{page.GetKey()}_{content.GetEntityId().GetHashCode()}]";
+			content.name    = $"[{page.GetKey()}_{content.GetId()}]";
 			var splitContent = Reference.GetComponent<RectTransform>("content", content);
 
 			// generate dashboard
