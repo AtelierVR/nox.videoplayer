@@ -7,7 +7,9 @@
         "Nox.VideoPlayer",
         "Nox.CCK.VideoPlayer",
         "Nox.UI",
-        "Nox.Terminal"
+        "Nox.CCK.UI",
+        "Nox.Terminal",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

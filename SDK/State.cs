@@ -5,6 +5,11 @@ namespace Nox.VideoPlayer {
         Stopped,
         Buffering,
         Stalled,
-        Ended
+        Ended,
+        /// <summary>
+        /// The player is repositioning to a requested time (see <c>IVideoPlayer.Time</c>):
+        /// the clocks are invalidated until playback resumes at the new position.
+        /// </summary>
+        Seeking
     }
 }

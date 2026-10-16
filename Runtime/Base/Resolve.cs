@@ -1,11 +1,11 @@
 using System.Linq;
-using Nox.VideoPlayer;
 using UnityEngine;
 using Logger = Nox.CCK.Utils.Logger;
 
 namespace Nox.VideoPlayer.Runtime.Base {
 	public class Resolve : IResolve {
 		public string       Id          { get; set; }
+		public string       Url         { get; set; }
 		public string       Title       { get; set; }
 		public string       Subtitle    { get; set; }
 		public string       Description { get; set; }

@@ -33,6 +33,16 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 			}
 		}
 
+		/// <summary>
+		/// The page url of a media, when yt-dlp returned a "flat" entry: a search result
+		/// carries <c>_type: "url"</c> plus this url, and no format at all (it must be
+		/// resolved again before it can be played).
+		/// </summary>
+		public static string FlatUrl(JToken video)
+			=> ToObject(video["_type"], "") == "url"
+				? ToObject(video["url"], "")
+				: null;
+
 		public int EstimatePriority(IFetchOptions options) {
 			if (IsUrl(options.Query))
 				return 1;
@@ -87,6 +97,7 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				Title      = ToObject(video["title"], ToObject(video["fulltitle"], ToObject(video["id"], ""))),
 				Thumbnails = ParseThumbnails(video["thumbnails"]),
 				Subtitles  = ParseSubtitles(video["subtitles"]),
+				Url        = FlatUrl(video),
 				Format     = ParseFormats(video["formats"])
 			};
 		}
@@ -101,7 +112,11 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				where !string.IsNullOrWhiteSpace(url)
 				let width = ToObject(thumb["width"], -1)
 				let height = ToObject(thumb["height"], -1)
-				select new Thumbnail { Url = url, Language = null, Resolution = new Vector2Int(width, height) }).ToArray();
+				select new Thumbnail { 
+					Url = url, 
+					Language = null, 
+					Resolution = new Vector2Int(width, height) 
+				}).ToArray();
 		}
 
 		private static Subtitle[] ParseSubtitles(JToken subtitles) {

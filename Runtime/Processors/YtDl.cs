@@ -199,7 +199,11 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			if (string.IsNullOrEmpty(url))
 				throw new ArgumentNullException(nameof(url));
 
-			if (!Uri.IsWellFormedUriString(url, UriKind.Absolute))
+			// A yt-dlp search expression ("ytsearch20:cats and dogs", "search:…") is not a URI:
+			// its spaces make IsWellFormedUriString fail, so only real URLs are validated.
+			var isSearchExpression = url.StartsWith("ytsearch", StringComparison.OrdinalIgnoreCase)
+				|| url.StartsWith("search:", StringComparison.OrdinalIgnoreCase);
+			if (!isSearchExpression && !Uri.IsWellFormedUriString(url, UriKind.Absolute))
 				throw new ArgumentException("Invalid URL", nameof(url));
 
 			if (!await WaitReady(timeout: timeout, cancellationToken: cancellationToken))

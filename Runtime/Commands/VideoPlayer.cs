@@ -138,7 +138,7 @@ namespace Nox.VideoPlayer.Runtime.Commands {
 
 			switch (status) {
 				case "play":
-					if (player.State == State.Playing) {
+					if (player.State is State.Playing or State.Seeking) {
 						context.PrintLn("Already playing.");
 						return;
 					}

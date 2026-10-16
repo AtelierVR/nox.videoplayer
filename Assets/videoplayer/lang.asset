@@ -29,3 +29,33 @@ MonoBehaviour:
       value: ""
     - key: video_player.live
       value: "Live"
+    - key: video_player.search.button
+      value: "Search"
+    - key: video_player.search.details
+      value: "Details"
+    - key: video_player.search.placeholder
+      value: "Url or search…"
+    - key: video_player.search.play
+      value: "Play"
+    - key: video_player.search.start
+      value: "Search a video and pick a result."
+    - key: video_player.search.searching
+      value: "Searching…"
+    - key: video_player.search.no_result
+      value: "No result."
+    - key: video_player.search.no_player
+      value: "No video player available."
+    - key: video_player.search.forbidden
+      value: "You are not allowed to change the video."
+    - key: video_player.search.error
+      value: "Search failed."
+    - key: video_player.search.result
+      value: "{0}"
+    - key: video_player.search.detail.title
+      value: "{0}"
+    - key: video_player.search.detail.subtitle
+      value: "{0}"
+    - key: video_player.search.detail.format
+      value: "{0}"
+    - key: video_player.search.detail.description
+      value: "{0}"

@@ -85,6 +85,7 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 					?? video["id"]?.ToString(),
 				Thumbnails = ParseThumbnails(video["thumbnails"]),
 				Subtitles  = Array.Empty<Subtitle>(),
+				Url        = Global.FlatUrl(video),
 				Format     = ParseFormats(video["formats"])
 			};
 		}
@@ -97,7 +98,11 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				where thumb is { Type: JTokenType.Object }
 				let url = Global.ToObject(thumb["url"], "")
 				where !string.IsNullOrWhiteSpace(url)
-				select new Thumbnail { Url = url, Language = null, Resolution = ExtractResolutionFromThumbnailUrl(url) }).ToArray();
+				select new Thumbnail { 
+					Url = url, 
+					Language = null, 
+					Resolution = ExtractResolutionFromThumbnailUrl(url)
+				}).ToArray();
 		}
 
 		private static Vector2Int ExtractResolutionFromThumbnailUrl(string url) {

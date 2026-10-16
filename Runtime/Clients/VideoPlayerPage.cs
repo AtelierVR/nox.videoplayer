@@ -92,6 +92,18 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		public void OnDisplay(IPage lastPage)
 			=> OnUpdate();
 
+		/// <summary>
+		/// Whether the local user is allowed to change the video on the selected player
+		/// (not read-only, see <see cref="IVideoPlayerControl"/>). Drives the search button.
+		/// </summary>
+		internal bool CanControl
+			=> GetSelectedPlayer() is IVideoPlayerControl control
+				&& !control.IsReadonly;
+
+		/// <summary>Open the search page acting on the selected player.</summary>
+		internal void OpenSearch()
+			=> Client.UiAPI?.SendGoto(_mId, VideoSearchPage.GetStaticKey(), GetSelectedPlayer()?.GetId() ?? 0);
+
 		internal void OnUpdate()
 			=> _component?.UpdateUI();
 
@@ -137,9 +149,12 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		public void TogglePlayPause() {
 			var player = GetSelectedPlayer();
 			if (player == null) return;
-			if (player.State == State.Playing)
+			// Seeking/buffering are transient: the underlying playback still runs, so pause
+			// it instead of trying to resume.
+			if (player.State == State.Paused)
+				player.Resume();
+			else
 				player.Pause();
-			else player.Resume();
 		}
 
     }

@@ -100,6 +100,7 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				Title      = video["title"]?.ToString() ?? video["fulltitle"]?.ToString() ?? video["id"]?.ToString(),
 				Thumbnails = ParseThumbnails(video["thumbnails"]),
 				Subtitles  = ParseSubtitles(video["subtitles"]),
+				Url        = Global.FlatUrl(video),
 				Format     = ParseFormats(video["formats"])
 			};
 		}
@@ -114,7 +115,11 @@ namespace Nox.VideoPlayer.Runtime.Handlers {
 				where !string.IsNullOrWhiteSpace(url)
 				let width = Global.ToObject(thumb["width"], -1)
 				let height = Global.ToObject(thumb["height"], -1)
-				select new Thumbnail { Url = url, Language = null, Resolution = new Vector2Int(width, height) }).ToArray();
+				select new Thumbnail { 
+					Url = url, 
+					Language = null, 
+					Resolution = new Vector2Int(width, height) 
+				}).ToArray();
 		}
 
 		private static Subtitle[] ParseSubtitles(JToken subtitles) {

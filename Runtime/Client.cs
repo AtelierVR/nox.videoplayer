@@ -48,6 +48,8 @@ namespace Nox.VideoPlayer.Runtime {
 			IPage page = null;
 			if (VideoPlayerPage.GetStaticKey() == key)
 				page = VideoPlayerPage.OnGotoAction(menu, context.Data[2..]);
+			else if (VideoSearchPage.GetStaticKey() == key)
+				page = VideoSearchPage.OnGotoAction(menu, context.Data[2..]);
 			if (page == null)
 				return;
 			Main.Instance.CoreAPI.EventAPI.Emit("menu_display", menu.Id, page);
