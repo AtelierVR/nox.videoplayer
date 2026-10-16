@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using Nox.CCK.Utils;
 
@@ -394,6 +395,92 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			var outputStr = output.ToString();
 
 			return outputStr;
+		}
+
+		/// <summary>
+		/// Transcode an image to PNG with the bundled ffmpeg, through pipes (no temporary
+		/// file). Unity's <c>ImageConversion</c> only reads png/jpg/exr/tga, so anything
+		/// else — webp first of all — must go through ffmpeg before it can become a
+		/// <see cref="UnityEngine.Texture2D"/>.
+		/// </summary>
+		/// <returns>The PNG bytes, or null when ffmpeg is unavailable or failed.</returns>
+		public static async UniTask<byte[]> TranscodeToPng(byte[] input, int timeout = 20000, CancellationToken cancellationToken = default) {
+			if (input == null || input.Length == 0)
+				return null;
+
+			var path = GetPath();
+			if (string.IsNullOrEmpty(path) || !File.Exists(path))
+				return null;
+
+			Process process = null;
+			try {
+				var startInfo = new ProcessStartInfo {
+					FileName               = path,
+					Arguments              = "-hide_banner -loglevel error -i pipe:0 -f image2pipe -vcodec png pipe:1",
+					UseShellExecute        = false,
+					RedirectStandardInput  = true,
+					RedirectStandardOutput = true,
+					RedirectStandardError  = true,
+					CreateNoWindow         = true
+				};
+
+				Logger.LogDebug($"{startInfo.FileName} {startInfo.Arguments}");
+				process = Process.Start(startInfo);
+				if (process == null)
+					return null;
+
+				// The three pipes have to be drained/written concurrently: a payload larger
+				// than the pipe buffer deadlocks the process otherwise.
+				var output = new MemoryStream();
+				var stdout = Task.Run(async () => {
+					var buffer = new byte[81920];
+					int read;
+					while ((read = await process.StandardOutput.BaseStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+						output.Write(buffer, 0, read);
+				});
+				var stderr = Task.Run(() => process.StandardError.ReadToEndAsync());
+				var stdin = Task.Run(async () => {
+					await process.StandardInput.BaseStream.WriteAsync(input, 0, input.Length).ConfigureAwait(false);
+					await process.StandardInput.BaseStream.FlushAsync().ConfigureAwait(false);
+					process.StandardInput.Close();
+				});
+
+				var startedAt = DateTime.UtcNow;
+				while (!process.HasExited) {
+					cancellationToken.ThrowIfCancellationRequested();
+					if ((DateTime.UtcNow - startedAt).TotalMilliseconds > timeout) {
+						try {
+							process.Kill();
+						} catch {
+							// ignored
+						}
+
+						return null;
+					}
+
+					await UniTask.Delay(25, cancellationToken: cancellationToken);
+				}
+
+				await stdin;
+				await stdout;
+				var error = await stderr;
+
+				if (process.ExitCode != 0) {
+					Logger.LogWarning($"ffmpeg could not convert the image: {error}");
+					return null;
+				}
+
+				return output.ToArray();
+			} catch (Exception e) {
+				try {
+					process?.Kill();
+				} catch {
+					// ignored
+				}
+
+				Logger.LogWarning($"ffmpeg image conversion failed: {e.Message}");
+				return null;
+			}
 		}
 
 		public static UniTask Update() {
