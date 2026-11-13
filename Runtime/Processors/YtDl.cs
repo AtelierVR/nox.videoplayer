@@ -199,7 +199,7 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			if (string.IsNullOrEmpty(url))
 				throw new ArgumentNullException(nameof(url));
 
-			// A yt-dlp search expression ("ytsearch20:cats and dogs", "search:…") is not a URI:
+			// A yt-dlp search expression ("ytsearch20:cats and dogs", "search:...") is not a URI:
 			// its spaces make IsWellFormedUriString fail, so only real URLs are validated.
 			var isSearchExpression = url.StartsWith("ytsearch", StringComparison.OrdinalIgnoreCase)
 				|| url.StartsWith("search:", StringComparison.OrdinalIgnoreCase);
@@ -229,7 +229,7 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 				};
 
 				Logger.LogDebug($"{startInfo.FileName} {startInfo.Arguments}");
-				var process = Process.Start(startInfo) 
+				var process = Process.Start(startInfo)
 					?? throw new InvalidOperationException("Failed to start yt-dlp process");
 
                 // Read output and error streams asynchronously

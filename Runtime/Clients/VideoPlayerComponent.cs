@@ -56,7 +56,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 
 		/// <summary>CanvasGroup fading the play/pause button in and out (Reference of the prefab).</summary>
 		private CanvasGroup _center;
-		/// <summary>Number of pointers (mouse, UI ray…) currently on the page.</summary>
+		/// <summary>Number of pointers (mouse, UI ray...) currently on the page.</summary>
 		private int _hoverCount;
 		/// <summary>Whether at least one pointer is on the page.</summary>
 		private bool _hovered;
@@ -185,8 +185,8 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			// play/pause intent of the underlying playback is unchanged.
 			if (state is State.Seeking or State.Buffering or State.Stalled)
 				return;
-			var iconName = state == State.Playing 
-				? "ui:icons/pause.png" 
+			var iconName = state == State.Playing
+				? "ui:icons/pause.png"
 				: "ui:icons/play_arrow.png";
 			var icon     = Client.GetAsset<Sprite>(iconName);
 			if (icon)
@@ -218,7 +218,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		// ── Bottom bar (media / live) ─────────────────────────────────────
 
 		/// <summary>
-		/// Called when the player opens another stream (Play, track change…): the
+		/// Called when the player opens another stream (Play, track change...): the
 		/// duration is only known at that moment, so this is where the bottom bar is
 		/// resolved — no need to check it every frame.
 		/// </summary>

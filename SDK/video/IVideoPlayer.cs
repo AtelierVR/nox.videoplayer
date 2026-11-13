@@ -55,7 +55,7 @@ namespace Nox.VideoPlayer {
 		/// <summary>
 		/// Event invoked when the player switches to another stream: a new media has been
 		/// opened, or another track has been selected. Use it to refresh everything that
-		/// depends on the stream (duration, resolution, tracks…) once, instead of polling
+		/// depends on the stream (duration, resolution, tracks...) once, instead of polling
 		/// it every frame.
 		/// </summary>
 		public UnityEvent<IVideoPlayer> OnStream { get; }
@@ -63,7 +63,7 @@ namespace Nox.VideoPlayer {
 		#endregion Stream
 
 		#region Actions
-		
+
 		/// <summary>
 		/// The current state of the video player.
 		/// </summary>

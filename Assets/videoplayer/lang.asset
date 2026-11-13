@@ -34,13 +34,13 @@ MonoBehaviour:
     - key: video_player.search.details
       value: "Details"
     - key: video_player.search.placeholder
-      value: "Url or search…"
+      value: "Url or search..."
     - key: video_player.search.play
       value: "Play"
     - key: video_player.search.start
       value: "Search a video and pick a result."
     - key: video_player.search.searching
-      value: "Searching…"
+      value: "Searching..."
     - key: video_player.search.no_result
       value: "No result."
     - key: video_player.search.no_player

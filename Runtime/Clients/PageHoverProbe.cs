@@ -5,7 +5,7 @@ using UnityEngine.Events;
 namespace Nox.VideoPlayer.Runtime.Clients {
 	/// <summary>
 	/// Relay for pointer enter/exit and movement, used to know whether a pointer (mouse, UI ray
-	/// from an interactor…) is currently on the page and whether it is still active. Counts
+	/// from an interactor...) is currently on the page and whether it is still active. Counts
 	/// concurrent pointers so several sources (mouse + rays) can be on the page at the same time.
 	/// </summary>
 	public class PageHoverProbe : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler {

@@ -11,7 +11,7 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 	/// <summary>
 	/// <see cref="DownloadHandlerScript"/> that turns the response body into a
 	/// <see cref="Texture2D"/>, including the formats Unity cannot read by itself
-	/// (webp, jxl…). Remote thumbnails are frequently served as webp, and
+	/// (webp, jxl...). Remote thumbnails are frequently served as webp, and
 	/// <see cref="UnityEngine.Networking.DownloadHandlerTexture"/> fails on them with a
 	/// <c>DataProcessingError</c> — this is the overload that handles them: the body is
 	/// decoded natively when possible, otherwise transcoded to png by the bundled ffmpeg.
@@ -27,7 +27,7 @@ namespace Nox.VideoPlayer.Runtime.Processors {
 			=> _content.ToArray();
 
 		/// <summary>
-		/// The image decoded natively (png, jpeg, exr, tga…), or null when the body uses a
+		/// The image decoded natively (png, jpeg, exr, tga...), or null when the body uses a
 		/// format Unity cannot read — use <see cref="GetTextureAsync"/> for those.
 		/// </summary>
 		public Texture2D texture {
