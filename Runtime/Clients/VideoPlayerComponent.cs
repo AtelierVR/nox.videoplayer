@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
 using Nox.CCK.Language;
 using Nox.CCK.UI;
 using Nox.CCK.Utils;
+using Nox.UI.Audio;
+using Nox.VideoPlayer.Runtime.Helpers;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -11,7 +15,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		private VideoPlayerPage _page;
 
 		public AspectRatioFitter ratio;
-		public Image video;
+		public RawImage video;
 		public Slider seek;
 		public Slider loaded;
 		public TextLanguage current;
@@ -42,10 +46,34 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			"last pointer movement.")]
 		public float hoverHideDelay = 2f;
 
+		[Tooltip("Same as 'hoverHideDelay' for the play/pause button alone: it only has to be there while " +
+			"the user reaches for it, so it goes away much sooner than the bars and the titles.")]
+		public float centerHideDelay = 0.35f;
+
 		/// <summary>Search button shown at the top-right of the title (null when absent).</summary>
 		private GameObject _searchButton;
 		/// <summary>Last applied visibility of the search button (avoid a LINQ lookup per frame).</summary>
 		private bool _searchAllowed;
+
+		/// <summary>Button toggling where the media is heard (null when absent).</summary>
+		private GameObject _outputButton;
+		/// <summary>Icon of the toggle: <c>cast</c> from the world, <c>headphones</c> from the menu.</summary>
+		private Image _outputIcon;
+		private bool _outputShown;
+		/// <summary>Last mode drawn on the toggle.</summary>
+		private bool _outputDraw;
+
+		/// <summary>Whether the media is heard from the menu instead of the place of its player in the world.</summary>
+		private bool _menuOutput;
+		/// <summary>Player whose media sources are muted while the sound is heard from the menu.</summary>
+		private IVideoPlayer _outputPlayer;
+		private AudioSource[] _outputWorld = Array.Empty<AudioSource>();
+		private bool[] _outputMuted;
+		/// <summary>Menu source the media is played on while the sound is heard from the menu.</summary>
+		private AudioSource _outputSource;
+		private IAudioPlay _outputPlay;
+		/// <summary>Whether the page is hidden: the media is heard from the world meanwhile, the choice is kept.</summary>
+		private bool _soundSuspended;
 
 		// Seek handling: the timeline must stay stable and immediate while seeking.
 		private bool _isUserSeeking;
@@ -56,6 +84,8 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 
 		/// <summary>CanvasGroup fading the play/pause button in and out (Reference of the prefab).</summary>
 		private CanvasGroup _center;
+		/// <summary>Groups holding the information drawn over the video (bars, titles, actions), faded when idle.</summary>
+		private readonly List<CanvasGroup> _chrome = new();
 		/// <summary>Number of pointers (mouse, UI ray...) currently on the page.</summary>
 		private int _hoverCount;
 		/// <summary>Whether at least one pointer is on the page.</summary>
@@ -83,7 +113,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 				Client.GetAsset<GameObject>("ui:prefabs/video_player.prefab"),
 				Reference.GetComponent<RectTransform>("content", container)
 			);
-			component.video          = Reference.GetComponent<Image>("video", videoPlayer);
+			component.video          = Reference.GetComponent<RawImage>("video", videoPlayer);
 			component.ratio          = Reference.GetComponent<AspectRatioFitter>("ratio", videoPlayer);
 			component.video.material = Instantiate(Client.GetAsset<Material>("ui:materials/video_texture.mat"));
 
@@ -117,6 +147,8 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			component.title    = Reference.GetComponent<TextLanguage>("title", container);
 			component.subtitle = Reference.GetComponent<TextLanguage>("subtitle", container);
 			component.CreateSearchButton(videoPlayer);
+			component.CreateOutputButton(videoPlayer);
+			component.ResolveChrome();
 
 			// bottom bar: the media (seek) and live variants are exclusive
 			component.mediaContainer = Reference.GetReference("video_player.media_container", videoPlayer);
@@ -135,8 +167,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		/// </summary>
 		private void CreateSearchButton(GameObject videoPlayer) {
 			// The container of the header actions is declared on the video_player prefab.
-			var actions = Reference.GetReference("actions_contanier", videoPlayer)
-				?? Reference.GetReference("actions_contanier");
+			var actions = Actions(videoPlayer);
 			if (!actions) {
 				Logger.LogWarning(
 					"No 'actions_contanier' reference found in the video player prefab",
@@ -159,6 +190,241 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 
 		private void OnSearchClicked()
 			=> _page?.OpenSearch();
+
+		/// <summary>
+		/// Appends the toggle that picks where the media is heard: out of its screen in the world (<c>cast</c>), or
+		/// from the menu (<c>headphones</c>) — the sources of the world are then muted and the same media is played
+		/// on a 2D source of the menu, so neither the distance nor the reverb zones of the map colour it.
+		/// </summary>
+		private void CreateOutputButton(GameObject videoPlayer) {
+			var actions = Actions(videoPlayer);
+			if (!actions)
+				return;
+
+			var go = Instantiate(Client.GetAsset<GameObject>("ui:prefabs/header_button.prefab"), actions.transform);
+			_outputIcon = Reference.GetComponent<Image>("image", go);
+
+			var label = Reference.GetComponent<TextLanguage>("text", go);
+			if (label) label.gameObject.SetActive(false);
+
+			var button = Reference.GetComponent<Button>("button", go);
+			if (button) button.onClick.AddListener(OnOutputClicked);
+
+			_outputButton = go;
+			_outputButton.SetActive(false);
+			DrawOutput(true);
+		}
+
+		/// <summary>Container of the header action buttons (Reference <c>actions_contanier</c> of the prefab).</summary>
+		private static GameObject Actions(GameObject videoPlayer)
+			=> Reference.GetReference("actions_contanier", videoPlayer)
+			   ?? Reference.GetReference("actions_contanier");
+
+		private void OnOutputClicked() {
+			_menuOutput = !_menuOutput;
+
+			var player = _page?.GetSelectedPlayer();
+			_page?.SetMenuOutput(player, _menuOutput);
+			ApplyOutput(player);
+			UpdateOutputButton(player);
+		}
+
+		/// <summary>Gives the sound of the world back to a player that goes away, and resets its toggle.</summary>
+		internal void ReleaseOutput(IVideoPlayer player) {
+			if (player == null || player != _outputPlayer)
+				return;
+
+			RestoreOutput();
+
+			_menuOutput = false;
+			UpdateOutputButton(null);
+			DrawOutput(true);
+		}
+
+		/// <summary>
+		/// The page is hidden: the media goes back to the world right away, the menu no longer being in front of the
+		/// user to hold it. The choice stays, it is put back by <see cref="ShowSound"/> when the page returns.
+		/// </summary>
+		internal void HideSound() {
+			_soundSuspended = true;
+			RestoreOutput();
+		}
+
+		/// <summary>The page is shown again: puts the media back where the user asked for it.</summary>
+		internal void ShowSound(IVideoPlayer player) {
+			_soundSuspended = false;
+			ApplyOutput(player);
+		}
+
+		/// <summary>Draws the icon of the current output: the screen of the world, or the headphones of the menu.</summary>
+		private void DrawOutput(bool force = false) {
+			if (!_outputIcon || (!force && _outputDraw == _menuOutput))
+				return;
+
+			_outputDraw = _menuOutput;
+			var icon = Client.GetAsset<Sprite>(_menuOutput ? "ui:icons/headphones.png" : "ui:icons/cast.png");
+			if (icon)
+				_outputIcon.sprite = icon;
+		}
+
+		/// <summary>
+		/// Applies the chosen output: in menu mode the media sources of the player are muted and the same clip
+		/// is played on the 2D source of the menu, otherwise the sources of the world are restored.
+		/// </summary>
+		private void ApplyOutput(IVideoPlayer player) {
+			RestoreOutput();
+			_outputPlayer = player;
+
+			if (!_menuOutput || _soundSuspended)
+				return;
+
+			_outputWorld = MediaSources(player);
+			if (_outputWorld.Length == 0)
+				return;
+
+			_outputMuted = new bool[_outputWorld.Length];
+			for (var i = 0; i < _outputWorld.Length; i++) {
+				_outputMuted[i]      = _outputWorld[i].mute;
+				_outputWorld[i].mute = true;
+			}
+
+			PlayOnMenu();
+		}
+
+		/// <summary>Unmutes the sources of the world and stops the menu playback (kept until it is needed again).</summary>
+		private void RestoreOutput() {
+			for (var i = 0; i < _outputWorld.Length; i++) {
+				var source = _outputWorld[i];
+				if (source)
+					source.mute = _outputMuted != null && i < _outputMuted.Length && _outputMuted[i];
+			}
+
+			_outputWorld = Array.Empty<AudioSource>();
+			_outputMuted = null;
+			// the player has to be applied again (see UpdateUI), the world sources being released
+			_outputPlayer = null;
+
+			_outputPlay?.Dispose();
+			_outputPlay = null;
+
+			if (_outputSource) {
+				_outputSource.Stop();
+				_outputSource.clip = null;
+			}
+		}
+
+		/// <summary>
+		/// AudioSources the player drives (the clip is the rolling buffer written by the decoder), so they are
+		/// exactly the ones to mute — and the clock the menu playback follows.
+		/// </summary>
+		private AudioSource[] MediaSources(IVideoPlayer player) {
+			var go   = player?.GetGameObject();
+			var clip = MediaClip(player);
+			if (!go || !clip)
+				return Array.Empty<AudioSource>();
+
+			var found = new List<AudioSource>();
+			foreach (var source in go.GetComponentsInChildren<AudioSource>(true))
+				if (source && source.clip == clip && source != _outputSource)
+					found.Add(source);
+
+			return found.ToArray();
+		}
+
+		private static AudioClip MediaClip(IVideoPlayer player)
+			=> player is IVideoPlayerAudio audio ? audio.Clip : null;
+
+		/// <summary>
+		/// Plays the media on the menu source, through the audio of the menu so it follows the volume and the mute
+		/// of the menu instead of the channel of the world.
+		/// </summary>
+		private void PlayOnMenu() {
+			var clip = MediaClip(_outputPlayer);
+			if (!clip)
+				return;
+
+			if (!_outputSource) {
+				// root level: the sound must keep playing while the page is hidden behind another one
+				var go = new GameObject("Video Player Menu Audio");
+
+				_outputSource              = go.AddComponent<AudioSource>();
+				_outputSource.playOnAwake  = false;
+				_outputSource.loop         = true;
+				_outputSource.spatialBlend = 0f;
+			}
+
+			_outputPlay?.Dispose();
+			_outputPlay = _page?.GetMenu() is IAudioMenu menu ? menu.Play(clip, _outputSource) : null;
+
+			if (_outputPlay is null) {
+				_outputSource.clip = clip;
+				_outputSource.Play();
+			}
+
+			FollowMenu();
+		}
+
+		/// <summary>
+		/// Keeps the menu playback on the samples of the media: the sources of the world keep playing (muted) and
+		/// are the clock, so the menu never drifts — pausing, buffering and seeking are followed as well.
+		/// </summary>
+		private void FollowMenu() {
+			if (!_outputSource || _outputWorld.Length == 0)
+				return;
+
+			var clip = _outputSource.clip ? _outputSource.clip : MediaClip(_outputPlayer);
+			if (!clip)
+				return;
+
+			var clock = Clock();
+			if (!clock) {
+				if (_outputSource.isPlaying)
+					_outputSource.Pause();
+				return;
+			}
+
+			if (!_outputSource.isPlaying) {
+				_outputSource.timeSamples = clock.timeSamples;
+				_outputSource.Play();
+				return;
+			}
+
+			var samples = clip.samples;
+			if (samples <= 0)
+				return;
+
+			var drift = Mathf.Abs(_outputSource.timeSamples - clock.timeSamples);
+			if (drift > samples / 4)
+				_outputSource.timeSamples = clock.timeSamples;
+		}
+
+		/// <summary>The furthest along of the media sources, which is the read cursor of the decoder.</summary>
+		private AudioSource Clock() {
+			AudioSource clock   = null;
+			var         samples = -1;
+
+			foreach (var source in _outputWorld) {
+				if (!source || !source.isPlaying || source.timeSamples <= samples)
+					continue;
+
+				samples = source.timeSamples;
+				clock   = source;
+			}
+
+			return clock;
+		}
+
+		/// <summary>Shows the toggle when the player has a sound, and keeps its icon on the current output.</summary>
+		private void UpdateOutputButton(IVideoPlayer player) {
+			var shown = MediaClip(player) != null;
+
+			if (_outputButton && shown != _outputShown) {
+				_outputShown = shown;
+				_outputButton.SetActive(shown);
+			}
+
+			DrawOutput();
+		}
 
 		public void UpdateProgress(IVideoPlayer player, double progress) {
 			if (player == null)
@@ -225,8 +491,31 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		public void UpdateStream(IVideoPlayer player) {
 			_streamPlayer = player;
 			SetLive(player != null && IsStream(player));
+
+			// the sources and the clip of the media change with the stream: the output has to be applied again
+			if (_menuOutput)
+				ApplyOutput(player);
 		}
 
+		/// <summary>The media sources of the world are muted while the sound is heard from the menu: release them.</summary>
+		private void OnDisable()
+			=> RestoreOutput();
+
+		/// <summary>The page is shown again: puts the sound back where the user asked for it.</summary>
+		private void OnEnable() {
+			if (_menuOutput)
+				ApplyOutput(_page?.GetSelectedPlayer());
+		}
+
+		/// <summary>The media sources of the world are muted while the sound is heard from the menu: release them.</summary>
+		private void OnDestroy() {
+			RestoreOutput();
+
+			if (_outputSource) {
+				_outputSource.gameObject.Destroy();
+				_outputSource = null;
+			}
+		}
 		/// <summary>
 		/// Whether the player plays a live stream, i.e. a stream without a duration
 		/// (see <see cref="IVideoPlayerDetails.IsStream"/>).
@@ -256,12 +545,32 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			return child ? child.GetComponent<TextLanguage>() : null;
 		}
 
-		public void UpdateRender(IVideoPlayer player) {
-			var render = player is IVideoPlayerVideo tex ? tex.Texture : null;
-			if (!render || !video || !ratio)
+		public void UpdateRender(IVideoPlayer player, Texture2D texture = null) {
+			var render = texture ? texture : player is IVideoPlayerVideo tex ? tex.Texture : null;
+			if (!video)
 				return;
-			video.material.mainTexture = render;
-			ratio.aspectRatio          = (float)render.width / render.height;
+
+			// no frame yet: the empty quad (white) must not be drawn at all
+			var shown = render != null;
+			if (video.enabled != shown)
+				video.enabled = shown;
+
+			if (!render || !ratio)
+				return;
+
+			video.texture     = render;
+			ratio.aspectRatio = (float)render.width / render.height;
+		}
+
+		/// <summary>
+		/// Called when the decoder hands a new clip (one per media): in menu mode the menu source has to play it, so
+		/// the output is applied again, exactly like a new texture is written on the video.
+		/// </summary>
+		internal void UpdateAudio(IVideoPlayer player) {
+			if (player == null || player != _outputPlayer || !_menuOutput)
+				return;
+
+			ApplyOutput(player);
 		}
 
 		public void UpdateUI() {
@@ -276,8 +585,19 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			}
 
 			var player = _page.GetSelectedPlayer();
-			if (player == null)
+
+			if (player != _outputPlayer) {
+				_menuOutput = _page.GetMenuOutput(player);
+				ApplyOutput(player);
+			} else if (_menuOutput)
+				FollowMenu();
+
+			UpdateOutputButton(player);
+
+			if (player == null) {
+				UpdateRender(null);
 				return;
+			}
 			if (player != _streamPlayer)
 				UpdateStream(player); // another player is displayed: its bar may differ
 			UpdateRender(player);
@@ -286,6 +606,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			UpdateTitle(player);
 			UpdateLoading(player.State);
 			UpdateCenterVisibility(IsPlaying(player.State));
+			UpdateChromeVisibility(IsPlaying(player.State));
 		}
 		private void UpdateTitle(IVideoPlayer player) {
 			if (player == null)
@@ -452,7 +773,7 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 				&& (!playing
 					|| _isUserSeeking
 					|| _buttonHovered
-					|| (_hovered && Time.unscaledTime - _lastActivityAt < hoverHideDelay));
+					|| (_hovered && Time.unscaledTime - _lastActivityAt < centerHideDelay));
 			float target = visible ? 1f : 0f;
 
 			if (Mathf.Approximately(_center.alpha, target))
@@ -467,6 +788,121 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			bool clickable = _center.alpha > 0.5f;
 			_center.blocksRaycasts = clickable;
 			_center.interactable   = clickable;
+		}
+
+		/// <summary>Fade of the information panels, slower than the button so they do not blink.</summary>
+		private const float ChromeFade = 0.25f;
+
+		/// <summary>
+		/// Marks the information drawn over the video: every child of the player that is not the video itself, the
+		/// panel behind it or the loading indicator (top and bottom gradients, bars, header actions...), plus the
+		/// elements that may be authored outside the player prefab (titles, timeline, action buttons).
+		/// </summary>
+		private void ResolveChrome() {
+			if (!video)
+				return;
+
+			var root = video.transform.parent;
+			if (!root)
+				return;
+
+			for (var i = 0; i < root.childCount; i++) {
+				var child = root.GetChild(i);
+				if (child == video.transform)
+					continue;
+				if (loading && child == loading.transform)
+					continue;
+				if (child.name.Equals("background", StringComparison.OrdinalIgnoreCase))
+					continue;
+
+				AddChrome(child);
+			}
+
+			MarkChrome(title);
+			MarkChrome(subtitle);
+			MarkChrome(seek);
+			MarkChrome(center);
+			MarkChrome(mediaContainer);
+			MarkChrome(liveContainer);
+			MarkChrome(_searchButton);
+			MarkChrome(_outputButton);
+		}
+
+		private void MarkChrome(Component mark)
+			=> MarkChrome(mark ? mark.transform : null);
+
+		private void MarkChrome(GameObject mark)
+			=> MarkChrome(mark ? mark.transform : null);
+
+		private void MarkChrome(Transform mark) {
+			if (!mark)
+				return;
+
+			var videoRoot = video ? video.transform.parent : null;
+			var node      = Climb(mark, videoRoot) ?? Climb(mark, transform);
+			if (!node)
+				return;
+
+			AddChrome(node);
+		}
+
+		/// <summary>The direct child of <paramref name="root"/> that contains <paramref name="mark"/>.</summary>
+		private static Transform Climb(Transform mark, Transform root) {
+			if (!root)
+				return null;
+
+			var node = mark;
+			while (node && node.parent != root)
+				node = node.parent;
+
+			return node && node.parent == root ? node : null;
+		}
+
+		private void AddChrome(Transform node) {
+			if (!node || !video)
+				return;
+
+			// never fade the video itself, nor anything that holds it
+			if (node == video.transform || video.transform.IsChildOf(node))
+				return;
+
+			var group = node.gameObject.GetOrAddComponent<CanvasGroup>();
+
+			// the play/pause button fades on its own (see UpdateCenterVisibility)
+			if (group == _center || _chrome.Contains(group))
+				return;
+
+			_chrome.Add(group);
+		}
+
+		/// <summary>
+		/// Fades the information of the page out when no pointer is on it and the cursor stopped moving, so only
+		/// the video is left; a pointer coming back (or a moving one) brings everything back.
+		/// </summary>
+		private void UpdateChromeVisibility(bool playing) {
+			if (_chrome.Count == 0)
+				return;
+
+			// the loading indicator and a timeline being dragged own the page
+			bool busy    = (loading && loading.activeSelf) || _isUserSeeking;
+			bool visible = busy
+				|| !playing
+				|| _buttonHovered
+				|| (_hovered && Time.unscaledTime - _lastActivityAt < hoverHideDelay);
+			var target = visible ? 1f : 0f;
+
+			for (var i = 0; i < _chrome.Count; i++) {
+				var group = _chrome[i];
+				if (!group)
+					continue;
+
+				if (!Mathf.Approximately(group.alpha, target))
+					group.alpha = Mathf.MoveTowards(group.alpha, target, Time.unscaledDeltaTime / ChromeFade);
+
+				bool clickable = group.alpha > 0.5f;
+				group.blocksRaycasts = clickable;
+				group.interactable   = clickable;
+			}
 		}
 	}
 }

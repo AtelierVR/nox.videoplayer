@@ -40,6 +40,25 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		private VideoPlayerComponent _component;
 		private int                  _selected;
 
+		/// <summary>
+		/// Where the sound of each player was left: out of its screen in the world, or from the menu. Kept on the
+		/// page (and not on the component, which is rebuilt on every visit) so the choice survives the navigation,
+		/// and cleaned with the player when it goes away.
+		/// </summary>
+		private static readonly Dictionary<IVideoPlayer, bool> MenuOutputs = new();
+
+		/// <summary>Whether the media of <paramref name="player"/> is heard from the menu instead of the world.</summary>
+		internal bool GetMenuOutput(IVideoPlayer player)
+			=> player != null && MenuOutputs.TryGetValue(player, out var menu) && menu;
+
+		/// <summary>Remembers where the user put the sound of <paramref name="player"/>.</summary>
+		internal void SetMenuOutput(IVideoPlayer player, bool menu) {
+			if (player == null)
+				return;
+
+			MenuOutputs[player] = menu;
+		}
+
 		public object[] GetContext()
 			=> _context;
 
@@ -76,6 +95,12 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 		}
 
 		private void OnUnRegistered(IVideoPlayer player) {
+			// a player that goes away keeps neither its sound nor the choice of where it was
+			if (player != null) {
+				MenuOutputs.Remove(player);
+				_component?.ReleaseOutput(player);
+			}
+
 			Remove(player);
 			if (player == null || player.GetId() != _selected) return;
 			var next = VideoPlayerManager.ActiveVideoPlayers.FirstOrDefault();
@@ -89,8 +114,13 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			OnUpdate();
 		}
 
-		public void OnDisplay(IPage lastPage)
-			=> OnUpdate();
+		public void OnDisplay(IPage lastPage) {
+			OnUpdate();
+			_component?.ShowSound(GetSelectedPlayer());
+		}
+
+		public void OnHide(IPage nextPage)
+			=> _component?.HideSound();
 
 		/// <summary>
 		/// Whether the local user is allowed to change the video on the selected player
@@ -136,9 +166,14 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			_component?.UpdatePlayStatus(player, state);
 		}
 
-        public void OnTexture(IVideoPlayer player, Texture2D _) {
+        public void OnTexture(IVideoPlayer player, Texture2D texture) {
 			if (player == null || player.GetId() != _selected) return;
-			_component?.UpdateRender(player);
+			_component?.UpdateRender(player, texture);
+        }
+
+        public void OnClip(IVideoPlayer player) {
+			if (player == null || player.GetId() != _selected) return;
+			_component?.UpdateAudio(player);
         }
 
         public void OnResolution(IVideoPlayer player, Vector2Int _) {
@@ -171,7 +206,9 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			if (Player is IVideoPlayerVideo pt)
 				pt.OnTexture.AddListener(OnTexture);
 			if (Player is IVideoPlayerResolution pr)
-				pr.OnResolution.AddListener(OnResolution); 
+				pr.OnResolution.AddListener(OnResolution);
+			if (Player is IVideoPlayerAudio pa)
+				pa.OnClip.AddListener(OnClip);
 			Logger.Log($"[VideoPlayerPage] Player {player.GetId()} added to UI");
 		}
 
@@ -181,7 +218,9 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 			if (Player is IVideoPlayerVideo pt)
 				pt.OnTexture.RemoveListener(OnTexture);
 			if (Player is IVideoPlayerResolution pr)
-				pr.OnResolution.RemoveListener(OnResolution); 
+				pr.OnResolution.RemoveListener(OnResolution);
+			if (Player is IVideoPlayerAudio pa)
+				pa.OnClip.RemoveListener(OnClip);
 			Logger.Log($"[VideoPlayerPage] Player {Player.GetId()} removed from UI");
 		}
 
@@ -196,6 +235,9 @@ namespace Nox.VideoPlayer.Runtime.Clients {
 
         private void OnTexture(IVideoPlayer _, Texture2D texture)
 			=> Page.OnTexture(Player, texture);
+
+        private void OnClip(IVideoPlayer _, AudioClip clip)
+			=> Page.OnClip(Player);
 
         private void OnResolution(IVideoPlayer _, Vector2Int resolution)
 			=> Page.OnResolution(Player, resolution);
